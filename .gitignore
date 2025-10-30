@@ -52,13 +52,19 @@ wandb/
 *.EGG-INFO
 dfnet
 
-# Images (except assets)
+# Images (except assets and synthetic test datasets)
 *.jpg
 *.jpeg
 *.png
 !assets/**/*.jpg
 !assets/**/*.jpeg
 !assets/**/*.png
+!tests/synthetic_*/**/*.jpg
+!tests/synthetic_*/**/*.jpeg
+!tests/synthetic_*/**/*.png
+!synthetic_*/**/*.jpg
+!synthetic_*/**/*.jpeg
+!synthetic_*/**/*.png
 
 # OS
 .DS_Store
