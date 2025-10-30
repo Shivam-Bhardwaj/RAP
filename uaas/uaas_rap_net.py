@@ -7,9 +7,12 @@ from models.apr.rapnet import RAPNet
 class UAASRAPNet(RAPNet):
     def __init__(self, args):
         super().__init__(args)
+        # Get feature_dim from parent class after initialization
+        # RAPNet uses hidden_dim from args for transformer output
+        feature_dim = getattr(self, 'feature_dim', args.hidden_dim if hasattr(args, 'hidden_dim') else 256)
         # Add a head to predict aleatoric uncertainty (log variance)
         self.log_var_head = nn.Sequential(
-            nn.Linear(self.feature_dim, 128),
+            nn.Linear(feature_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 6) # For 6-DoF pose (3 translation, 3 rotation as axis-angle)
         )
