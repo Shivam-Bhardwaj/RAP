@@ -13,6 +13,12 @@ import pickle
 import shutil
 import uuid
 from random import randint
+import sys
+import os
+
+# Add submodules to path for fused_ssim
+if os.path.exists('submodules/fused-ssim'):
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'submodules', 'fused-ssim'))
 
 import lpips
 import matplotlib.pyplot as plt
