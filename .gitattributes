@@ -1,47 +1,13 @@
-# Git LFS File Patterns
-# See https://git-lfs.github.com/ for more information
-
-# Model checkpoints and weights
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.pth filter=lfs diff=lfs merge=lfs -text
-*.ckpt filter=lfs diff=lfs merge=lfs -text
-*.pkl filter=lfs diff=lfs merge=lfs -text
-
-# Point cloud files
-*.ply filter=lfs diff=lfs merge=lfs -text
-
-# Binary COLMAP files (if needed)
-*.bin filter=lfs diff=lfs merge=lfs -text
-
-# Large data files
-*.h5 filter=lfs diff=lfs merge=lfs -text
-*.hdf5 filter=lfs diff=lfs merge=lfs -text
-*.npz filter=lfs diff=lfs merge=lfs -text
-
-# Large numpy arrays (if needed)
-*.npy filter=lfs diff=lfs merge=lfs -text
-
-# Synthetic dataset files (for testing)
-# These patterns match synthetic datasets created by tests/synthetic_dataset.py
-tests/synthetic_*/**/*.jpg filter=lfs diff=lfs merge=lfs -text
-tests/synthetic_*/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
-tests/synthetic_*/**/*.png filter=lfs diff=lfs merge=lfs -text
-tests/synthetic_*/**/*.ply filter=lfs diff=lfs merge=lfs -text
-tests/synthetic_*/**/*.bin filter=lfs diff=lfs merge=lfs -text
-
-# Any synthetic dataset directory (general pattern)
-synthetic_*/**/*.jpg filter=lfs diff=lfs merge=lfs -text
-synthetic_*/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
-synthetic_*/**/*.png filter=lfs diff=lfs merge=lfs -text
-synthetic_*/**/*.ply filter=lfs diff=lfs merge=lfs -text
-synthetic_*/**/*.bin filter=lfs diff=lfs merge=lfs -text
-
-# Assets directory (if containing large images)
-# Uncomment if needed:
-# assets/**/*.jpg filter=lfs diff=lfs merge=lfs -text
-# assets/**/*.png filter=lfs diff=lfs merge=lfs -text
-# assets/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
-
-# Specific large files (if needed)
-# input.ply filter=lfs diff=lfs merge=lfs -text
-# point_cloud.ply filter=lfs diff=lfs merge=lfs -text
+*.jpg -filter -diff -merge
+*.jpeg -filter -diff -merge
+*.png -filter -diff -merge
+*.ply -filter -diff -merge
+*.pt -filter -diff -merge
+*.pth -filter -diff -merge
+*.ckpt -filter -diff -merge
+*.pkl -filter -diff -merge
+*.bin -filter -diff -merge
+*.h5 -filter -diff -merge
+*.hdf5 -filter -diff -merge
+*.npz -filter -diff -merge
+*.npy -filter -diff -merge
