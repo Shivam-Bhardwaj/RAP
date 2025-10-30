@@ -22,8 +22,24 @@ from tests.synthetic_dataset import create_synthetic_dataset
 def synthetic_dataset_fixture(tmp_path_factory):
     """
     Create a synthetic dataset from an existing dataset if available.
+    
+    Note: Synthetic datasets are generated on-demand from source data.
+    They are not stored in Git but can be regenerated using tests/synthetic_dataset.py
+    
     Falls back to None if no source dataset is found.
     """
+    # First check if we already have a synthetic dataset
+    existing_synthetic = os.path.join(os.path.dirname(__file__), "..", "synthetic_test_dataset")
+    if os.path.exists(existing_synthetic):
+        images_dir = os.path.join(existing_synthetic, "images")
+        if os.path.exists(images_dir):
+            images_count = len([f for f in os.listdir(images_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
+            if images_count > 10:  # Use existing if it has enough images
+                model_path = os.path.join(existing_synthetic, "model")
+                if os.path.exists(model_path):
+                    print(f"Using existing synthetic dataset: {existing_synthetic} ({images_count} images)")
+                    return existing_synthetic, model_path
+    
     # Try to find an existing dataset (check common locations)
     source_dataset_paths = [
         os.environ.get("RAP_TEST_DATASET_PATH"),
