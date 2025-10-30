@@ -102,7 +102,7 @@ class TestTrainingPipeline:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = "cpu"
         args.run_name = "test_uaas"
         args.logbase = str(tmp_path)
@@ -142,7 +142,7 @@ class TestTrainingPipeline:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = "cpu"
         args.run_name = "test_prob"
         args.logbase = str(tmp_path)
@@ -178,7 +178,7 @@ class TestTrainingPipeline:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = "cpu"
         args.run_name = "test_semantic"
         args.logbase = str(tmp_path)
@@ -211,7 +211,7 @@ class TestTrainingPipeline:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = "cpu"
         args.run_name = "test_uaas"
         args.logbase = str(tmp_path)
@@ -249,7 +249,7 @@ class TestModelForwardPass:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = config.device
         args.hidden_dim = 128
         args.num_heads = 4
@@ -294,7 +294,7 @@ class TestModelForwardPass:
         from arguments.options import config_parser
         
         parser = config_parser()
-        args = parser.parse_args([])
+        args = parser.parse_args(["--run_name", "test", "--datadir", "dummy"])
         args.device = "cpu"
         args.run_name = "test_uaas_iter"
         args.logbase = str(tmp_path)

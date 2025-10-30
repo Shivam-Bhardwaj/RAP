@@ -116,7 +116,11 @@ def fix_seed(seed=7):
 
 
 def search_for_max_iteration(folder):
+    if not os.path.exists(folder):
+        return None
     saved_iters = [int(fname.split("_")[-1]) for fname in os.listdir(folder)]  # [3000,7000]
+    if not saved_iters:
+        return None
     return max(saved_iters)
 
 

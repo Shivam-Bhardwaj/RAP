@@ -338,8 +338,14 @@ class GaussianRenderer(SpawnProcess):
 
     def load_gaussians(self):
         self.gaussians = GaussianModel(self.configs)
-        i = search_for_max_iteration(os.path.join(self.configs.model_path, "ckpts_point_cloud"))
-        self.gaussians.load_ckpt_ply(os.path.join(self.configs.model_path, "ckpts_point_cloud", f"iteration_{i}", "point_cloud.ply"))
+        checkpoint_dir = os.path.join(self.configs.model_path, "ckpts_point_cloud")
+        i = search_for_max_iteration(checkpoint_dir)
+        if i is None:
+            raise FileNotFoundError(
+                f"No Gaussian Splatting checkpoint found in {checkpoint_dir}. "
+                f"Please train Gaussian Splatting model first using gs.py or provide a checkpoint."
+            )
+        self.gaussians.load_ckpt_ply(os.path.join(checkpoint_dir, f"iteration_{i}", "point_cloud.ply"))
         bg_color = [1, 1, 1] if self.configs.white_background else [0, 0, 0]
         self.background = torch.tensor(bg_color, dtype=torch.float, device=self.configs.render_device)
         self.gaussians.set_eval(True)

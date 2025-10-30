@@ -4,6 +4,7 @@ Main training script for RAP extensions.
 import argparse
 from arguments import ModelParams, OptimizationParams, get_combined_args
 from arguments.options import config_parser
+from arguments import args_init
 from utils.general_utils import fix_seed
 
 from uaas.trainer import UAASTrainer
@@ -26,6 +27,8 @@ def main():
     args = get_combined_args(parser)
     model_params.extract(args)
     optimization.extract(args)
+    # Initialize Gaussian Splatting arguments (sets feature_maps_combine, etc.)
+    args = args_init.argument_init(args)
     fix_seed(args.seed)
 
     trainer_map = {
