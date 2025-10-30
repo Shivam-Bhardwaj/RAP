@@ -1,0 +1,23 @@
+# Testing Dependencies for RAP-ID
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-benchmark>=4.0.0
+pytest-timeout>=2.1.0
+
+# Code quality
+pylint>=2.15.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Test utilities
+hypothesis>=6.0.0  # Property-based testing
+faker>=18.0.0     # Fake data generation
+
+# Coverage reporting
+coverage>=7.0.0
+
+# Visualization for tests (optional)
+matplotlib>=3.6.0  # For uncertainty visualization tests
+
