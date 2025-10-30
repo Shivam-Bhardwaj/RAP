@@ -30,7 +30,9 @@ from dataset_loaders.seven_scenes import SevenScenes
 from utils.cameras import CamParams
 from utils.general_utils import fix_seed
 
-# Import trainers
+# Import trainers - need to import from rap.py module
+# Import base trainers from rap.py (which contains BaseTrainer and RVSWithDiscriminatorTrainer)
+import rap
 from rap import BaseTrainer, RVSWithDiscriminatorTrainer
 from uaas.trainer import UAASTrainer
 from probabilistic.trainer import ProbabilisticTrainer
@@ -227,7 +229,6 @@ def create_trainer(model_type: str, args):
         Trainer instance
     """
     if model_type == 'baseline':
-        from rap import BaseTrainer
         return BaseTrainer(args)
     elif model_type == 'uaas':
         return UAASTrainer(args)
