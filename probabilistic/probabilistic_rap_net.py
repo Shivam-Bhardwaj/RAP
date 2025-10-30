@@ -10,6 +10,10 @@ class ProbabilisticRAPNet(RAPNet):
     def __init__(self, args, num_gaussians=5):
         super().__init__(args)
         self.num_gaussians = num_gaussians
+        # Get feature_dim from decoder_dim (transformer output dimension)
+        decoder_dim = self.transformer_t.d_model
+        feature_dim = getattr(self, 'feature_dim', decoder_dim)
+        self.feature_dim = feature_dim
         self.mdn_head = nn.Linear(self.feature_dim, num_gaussians * (1 + 6 + 6)) # pi, mu, sigma for 6-DoF pose
 
     def forward(self, x, return_feature=False):
