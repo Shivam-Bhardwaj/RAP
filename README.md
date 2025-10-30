@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">🚀 RAP-ID<br>Robust Absolute Pose Regression<br>with Improvements & Extensions</h1>
+  <h1 align="center">RAP-ID<br>Robust Absolute Pose Regression<br>with Improvements & Extensions</h1>
   <h3 align="center">Enhanced Fork of RAP</h3>
   <p align="center">
     <a href="https://github.com/Shivam-Bhardwaj">Shivam Bhardwaj</a>
@@ -10,7 +10,7 @@
   </p>
 </p>
 
-## 📋 Overview
+## Overview
 
 **RAP-ID** (RAP with Improvements & Extensions) is an enhanced fork of the [RAP](https://github.com/ai4ce/RAP) system for 6-DoF camera localization. This fork extends the original RAP architecture with three major improvements:
 
@@ -20,9 +20,9 @@
 
 These extensions address key limitations in visual localization: uncertainty quantification, handling ambiguous scenes, and robustness to semantic scene variations.
 
-## ✨ Key Features
+## Key Features
 
-### 🔮 Uncertainty-Aware Adversarial Synthesis (UAAS)
+### Uncertainty-Aware Adversarial Synthesis (UAAS)
 
 The UAAS module extends RAPNet to output both pose predictions and explicit uncertainty estimates (epistemic and aleatoric). Key components:
 
@@ -36,7 +36,7 @@ The UAAS module extends RAPNet to output both pose predictions and explicit unce
 python train.py --config configs/7scenes.txt --trainer_type uaas --run_name experiment_uaas
 ```
 
-### 🎯 Multi-Hypothesis Probabilistic APR
+### Multi-Hypothesis Probabilistic APR
 
 Replaces single-point pose predictions with probabilistic outputs capable of expressing multiple plausible pose hypotheses:
 
@@ -49,7 +49,7 @@ Replaces single-point pose predictions with probabilistic outputs capable of exp
 python train.py --config configs/7scenes.txt --trainer_type probabilistic --run_name experiment_prob
 ```
 
-### 🎨 Semantic-Adversarial Scene Synthesis
+### Semantic-Adversarial Scene Synthesis
 
 Incorporates semantic segmentation into the training pipeline for targeted scene manipulation:
 
@@ -63,7 +63,7 @@ Incorporates semantic segmentation into the training pipeline for targeted scene
 python train.py --config configs/7scenes.txt --trainer_type semantic --run_name experiment_semantic --num_semantic_classes 19
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Module Structure
 
@@ -91,7 +91,7 @@ RAP-ID/
 └── train.py                 # Unified training script
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -108,7 +108,7 @@ cd RAP
 pip install -r requirements.txt
 ```
 
-See the [original RAP setup instructions](#-setup-instructions-from-original-rap) for detailed environment requirements.
+See the [original RAP setup instructions](#setup-instructions-from-original-rap) for detailed environment requirements.
 
 ### Training
 
@@ -136,16 +136,16 @@ python benchmark_speed.py --model_path /path/to/model --benchmark_pose --model_t
 
 Supported model types: `uaas`, `probabilistic`, `semantic`, `baseline`
 
-## 📊 Evaluation
+## Evaluation
 
-**Note:** Evaluation results will be added after running experiments. Metrics to include:
+Evaluation results will be added after running experiments. Metrics to include:
 
-- **Generalization:** Pose accuracy on held-out test sets and novel datasets
-- **Calibrated Uncertainty:** Correlation between predicted uncertainty and prediction error (UAAS)
-- **Ambiguity Handling:** Multi-modal pose predictions in ambiguous scenes (Probabilistic)
-- **Error Reduction:** Performance improvement over baseline RAP across benchmarks
+- **Generalization**: Pose accuracy on held-out test sets and novel datasets
+- **Calibrated Uncertainty**: Correlation between predicted uncertainty and prediction error (UAAS)
+- **Ambiguity Handling**: Multi-modal pose predictions in ambiguous scenes (Probabilistic)
+- **Error Reduction**: Performance improvement over baseline RAP across benchmarks
 
-## 📚 Citation
+## Citation
 
 If you use RAP-ID in your research, please cite both this work and the original RAP paper:
 
@@ -165,13 +165,13 @@ If you use RAP-ID in your research, please cite both this work and the original 
 }
 ```
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-This work is built upon the excellent [RAP](https://github.com/ai4ce/RAP) system by Sihang Li, Siqi Tan, Bowen Chang, Jing Zhang, Chen Feng, and Yiming Li. The original RAP paper was accepted to ICCV 2025.
+This work is built upon the RAP system by Sihang Li, Siqi Tan, Bowen Chang, Jing Zhang, Chen Feng, and Yiming Li. The original RAP paper was accepted to ICCV 2025.
 
 The original RAP repository is built on [Gaussian-Wild](https://github.com/EastbeanZhang/Gaussian-Wild), [Deblur-GS](https://github.com/Chaphlagical/Deblur-GS), and [DFNet](https://github.com/ActiveVisionLab/DFNet).
 
-## 🔗 Links
+## Links
 
 - **Original RAP Repository:** https://github.com/ai4ce/RAP
 - **Original Paper:** https://ai4ce.github.io/RAP/static/RAP_Paper.pdf
@@ -179,9 +179,9 @@ The original RAP repository is built on [Gaussian-Wild](https://github.com/Eastb
 
 ---
 
-## 📋 Setup Instructions (from Original RAP)
+## Setup Instructions (from Original RAP)
 
-*The following section contains setup instructions from the original RAP repository for reference.*
+The following section contains setup instructions from the original RAP repository for reference.
 
 ### Requirements
 
@@ -227,7 +227,7 @@ Post-refinement requires a CUDA-compatible GPU with at least 6GB of VRAM.
    > pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
    > ```
 
-## 🎨 Training, Rendering, and Evaluating 3DGS
+## Training, Rendering, and Evaluating 3DGS
 
 ```sh
 python gs.py -s /path/to/colmap/data -m /path/to/output
@@ -239,7 +239,7 @@ If you want to use depth supervision for datasets that do not come with metric d
 
 > Note that for 3DGS-related arguments, only `-s, --source_path` and `-m, --model_path` will be taken from the command line when running `render.py`, `rap.py`, and `refine.py`. Other arguments will be loaded from `cfg_args` in the 3DGS model directory. If you want to change some arguments, you may just edit the `cfg_args` file, or assign values in the code.
 
-## 🚀 Running Original RAP
+## Running Original RAP
 
 ```sh
 python rap.py -c configs/actual_config_file.txt -m /path/to/3dgs
@@ -249,7 +249,7 @@ See `arguments/options.py` for arguments usage.
 
 Due to uncontrollable randomness, the computation order of floating-point numbers may vary across different devices, batch sizes, and whether the model is compiled, potentially leading to results that differ from those reported in the paper.
 
-## 🤩 RAP<sub>ref</sub> Post Refinement
+## RAP<sub>ref</sub> Post Refinement
 
 ```sh
 python refine.py -c configs/actual_config_file.txt -m /path/to/3dgs
