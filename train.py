@@ -6,14 +6,6 @@ from arguments import ModelParams, OptimizationParams, get_combined_args
 from arguments.options import config_parser
 from utils.general_utils import fix_seed
 
-"""
-Main training script for RAP extensions.
-"""
-import argparse
-from arguments import ModelParams, OptimizationParams, get_combined_args
-from arguments.options import config_parser
-from utils.general_utils import fix_seed
-
 from uaas.trainer import UAASTrainer
 from probabilistic.trainer import ProbabilisticTrainer
 from semantic.trainer import SemanticTrainer
