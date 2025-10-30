@@ -136,14 +136,217 @@ python benchmark_speed.py --model_path /path/to/model --benchmark_pose --model_t
 
 Supported model types: `uaas`, `probabilistic`, `semantic`, `baseline`
 
-## Evaluation
+## Technical Documentation
 
-Evaluation results will be added after running experiments. Metrics to include:
+### Mathematical Formulations
 
-- **Generalization**: Pose accuracy on held-out test sets and novel datasets
-- **Calibrated Uncertainty**: Correlation between predicted uncertainty and prediction error (UAAS)
-- **Ambiguity Handling**: Multi-modal pose predictions in ambiguous scenes (Probabilistic)
-- **Error Reduction**: Performance improvement over baseline RAP across benchmarks
+#### Uncertainty-Aware Adversarial Synthesis (UAAS)
+
+The UAAS extension models pose prediction as a probabilistic regression task, predicting both pose estimates and uncertainty measures. Given an input image $\mathbf{x} \in \mathbb{R}^{H \times W \times 3}$, the model outputs:
+
+$$\hat{\mathbf{p}} = f_\theta(\mathbf{x}), \quad \log \boldsymbol{\sigma}^2 = g_\phi(\mathbf{x})$$
+
+where $\hat{\mathbf{p}} \in \mathbb{R}^6$ is the predicted 6-DoF pose (3D translation and rotation) and $\log \boldsymbol{\sigma}^2 \in \mathbb{R}^6$ is the predicted log-variance for aleatoric uncertainty.
+
+**Aleatoric Uncertainty:** Captures data-dependent uncertainty (noise in observations):
+
+$$\sigma_{\text{ale}}^2 = \exp(\log \boldsymbol{\sigma}^2)$$
+
+**Epistemic Uncertainty:** Captures model uncertainty (lack of training data), estimated via Monte Carlo Dropout:
+
+$$\sigma_{\text{epi}}^2 = \frac{1}{M} \sum_{m=1}^{M} (\hat{\mathbf{p}}^{(m)} - \bar{\mathbf{p}})^2$$
+
+where $M$ is the number of Monte Carlo samples and $\bar{\mathbf{p}} = \frac{1}{M}\sum_{m=1}^{M} \hat{\mathbf{p}}^{(m)}$.
+
+**Total Uncertainty:** The combined uncertainty estimate:
+
+$$\sigma_{\text{total}}^2 = \sigma_{\text{ale}}^2 + \sigma_{\text{epi}}^2$$
+
+**Uncertainty-Aware Pose Loss:** The pose loss incorporates aleatoric uncertainty:
+
+$$\mathcal{L}_{\text{pose}} = \frac{1}{2}\sum_{d=1}^{6} \left[ \exp(-\log \sigma_d^2) \cdot (p_d - \hat{p}_d)^2 + \log \sigma_d^2 \right]$$
+
+where the first term is the weighted squared error and the second term prevents uncertainty from growing unbounded.
+
+**Uncertainty-Weighted Adversarial Loss:** The discriminator loss is weighted by uncertainty:
+
+$$\mathcal{L}_{\text{adv}} = \mathbb{E}_{\mathbf{f} \sim p_{\text{fake}}} \left[ w(\sigma_{\text{total}}) \cdot \mathcal{L}_{\text{MSE}}(D(\mathbf{f}), 1) \right]$$
+
+where $w(\sigma_{\text{total}}) = \exp(-\bar{\sigma}_{\text{total}})$ prioritizes uncertain regions, and $D$ is the discriminator.
+
+**Uncertainty-Guided Sampling:** Training samples are synthesized in high-uncertainty regions:
+
+$$\mathcal{V}_{\text{sample}} = \{\mathbf{v} : \sigma_{\text{total}}(\mathbf{v}) > \tau_{\text{uncertainty}}\}$$
+
+where $\tau_{\text{uncertainty}}$ is a threshold for selecting uncertain viewpoints $\mathbf{v}$.
+
+#### Multi-Hypothesis Probabilistic APR
+
+The probabilistic model replaces point estimates with a mixture density network (MDN) that outputs a probability distribution over poses:
+
+$$p(\mathbf{p} | \mathbf{x}) = \sum_{k=1}^{K} \pi_k \mathcal{N}(\mathbf{p}; \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$$
+
+where $K$ is the number of mixture components, $\pi_k$ are mixture weights satisfying $\sum_{k=1}^{K} \pi_k = 1$, and $\mathcal{N}(\cdot; \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$ is a multivariate Gaussian distribution.
+
+**MDN Output:** The network outputs parameters for each component:
+
+$$\{\pi_k, \boldsymbol{\mu}_k, \log \boldsymbol{\sigma}_k\}_{k=1}^{K} = h_\psi(\mathbf{x})$$
+
+where $\boldsymbol{\Sigma}_k = \text{diag}(\exp(\log \boldsymbol{\sigma}_k^2))$ for computational efficiency.
+
+**Negative Log-Likelihood Loss:** Training minimizes:
+
+$$\mathcal{L}_{\text{MDN}} = -\log \sum_{k=1}^{K} \pi_k \mathcal{N}(\mathbf{p}_{\text{gt}}; \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$$
+
+**Hypothesis Selection:** Given multiple hypotheses $\{\mathbf{p}_k\}_{k=1}^{K}$ sampled from the mixture, the best hypothesis is selected via rendering-based validation:
+
+$$\mathbf{p}^* = \arg\max_{\mathbf{p}_k} \text{SSIM}(\mathcal{R}(\mathbf{p}_k), \mathbf{x}_{\text{obs}})$$
+
+where $\mathcal{R}(\cdot)$ is the 3DGS renderer and $\text{SSIM}$ is the structural similarity metric.
+
+#### Semantic-Adversarial Scene Synthesis
+
+The semantic extension incorporates semantic segmentation maps $\mathbf{s} \in \{0, 1, \ldots, C-1\}^{H \times W}$ where $C$ is the number of semantic classes.
+
+**Semantic-Aware Synthesis:** Scene modifications target specific semantic regions:
+
+$$\mathbf{x}_{\text{synth}} = \mathcal{R}(\mathbf{p}, \mathbf{s}, \mathcal{M}_c)$$
+
+where $\mathcal{M}_c$ is a modification function for semantic class $c$, enabling targeted appearance changes (e.g., sky color, building occlusion).
+
+**Adversarial Hard Negative Mining:** Synthetic scenes are generated to maximize prediction error:
+
+$$\mathbf{x}_{\text{hard}} = \arg\max_{\mathbf{x}_{\text{synth}}} \mathcal{L}_{\text{pose}}(f_\theta(\mathbf{x}_{\text{synth}}), \mathbf{p}_{\text{gt}})$$
+
+**Curriculum Learning:** Training difficulty increases gradually:
+
+$$d_t = d_0 + \alpha \cdot \min\left(\frac{\text{Perf}(t) - \tau_{\text{perf}}}{\Delta_{\text{perf}}}, 1\right) \cdot (d_{\max} - d_0)$$
+
+where $d_t$ is difficulty at iteration $t$, $d_0$ is initial difficulty, $\alpha$ is increment rate, $\text{Perf}(t)$ is model performance, $\tau_{\text{perf}}$ is performance threshold, and $d_{\max}$ is maximum difficulty.
+
+### Model Architectures
+
+#### UAASRAPNet
+
+Architecture: `RAPNet` backbone + uncertainty head
+
+- **Backbone:** Standard RAPNet feature extractor $f_\theta: \mathbb{R}^{H \times W \times 3} \rightarrow \mathbb{R}^D$
+- **Uncertainty Head:** $g_\phi: \mathbb{R}^D \rightarrow \mathbb{R}^6$ with architecture:
+  - Linear layer: $D \rightarrow 128$
+  - ReLU activation
+  - Linear layer: $128 \rightarrow 6$ (outputs $\log \boldsymbol{\sigma}^2$)
+
+**Parameters:**
+- `feature_dim`: Dimension $D$ of backbone features (default: from RAPNet)
+- Output: Pose prediction $\hat{\mathbf{p}} \in \mathbb{R}^{12}$ (flattened $3 \times 4$ matrix) + log-variance $\log \boldsymbol{\sigma}^2 \in \mathbb{R}^6$
+
+#### ProbabilisticRAPNet
+
+Architecture: `RAPNet` backbone + MDN head
+
+- **Backbone:** Standard RAPNet feature extractor
+- **MDN Head:** $h_\psi: \mathbb{R}^D \rightarrow \mathbb{R}^{K \cdot (1 + 6 + 6)}$ outputting:
+  - Mixture weights: $\boldsymbol{\pi} \in \mathbb{R}^K$ (logits)
+  - Means: $\boldsymbol{\mu} \in \mathbb{R}^{K \times 6}$
+  - Log-stddevs: $\log \boldsymbol{\sigma} \in \mathbb{R}^{K \times 6}$
+
+**Parameters:**
+- `num_gaussians`: Number of mixture components $K$ (default: 5)
+- Output: Mixture distribution `torch.distributions.MixtureSameFamily`
+
+#### SemanticRAPNet
+
+Architecture: `RAPNet` backbone + semantic fusion (optional)
+
+- **Backbone:** Standard RAPNet feature extractor
+- **Semantic Integration:** (To be implemented) Fuse semantic features with image features
+
+**Parameters:**
+- `num_semantic_classes`: Number of semantic classes $C$ (default: 19)
+
+### Loss Functions
+
+#### Uncertainty-Weighted Adversarial Loss
+
+$$\mathcal{L}_{\text{adv}} = \mathbb{E}_{\mathbf{f}} \left[ w(\sigma_{\text{total}}(\mathbf{f})) \cdot \|D(\mathbf{f}) - 1\|^2 \right]$$
+
+where $w(\sigma) = \exp(-\bar{\sigma})$ and $\bar{\sigma}$ is the mean uncertainty.
+
+#### Mixture Negative Log-Likelihood Loss
+
+$$\mathcal{L}_{\text{MDN}} = -\frac{1}{N} \sum_{i=1}^{N} \log \sum_{k=1}^{K} \pi_{i,k} \mathcal{N}(\mathbf{p}_{i,\text{gt}}; \boldsymbol{\mu}_{i,k}, \boldsymbol{\Sigma}_{i,k})$$
+
+### Training Arguments and Parameters
+
+#### Common Training Arguments
+
+- **`--trainer_type`**: Model type (`baseline`, `uaas`, `probabilistic`, `semantic`)
+- **`--batch_size`**: Batch size for training (default: 1)
+- **`--learning_rate`**: Initial learning rate (default: 1e-4)
+- **`--epochs`**: Number of training epochs
+- **`--amp`**: Enable automatic mixed precision training
+- **`--compile_model`**: Enable `torch.compile` optimization
+- **`--freeze_batch_norm`**: Freeze batch normalization layers
+
+#### UAAS-Specific Arguments
+
+- **`--loss_weights`**: Weights for loss components `[pose, feature, rvs_pose, adversarial]`
+- **`--uncertainty_threshold`**: Threshold $\tau_{\text{uncertainty}}$ for uncertainty-guided sampling
+- **`--mc_samples`**: Number of Monte Carlo samples $M$ for epistemic uncertainty (default: 10)
+
+#### Probabilistic-Specific Arguments
+
+- **`--num_gaussians`**: Number of mixture components $K$ (default: 5)
+- **`--hypothesis_samples`**: Number of hypotheses to sample for validation (default: 10)
+
+#### Semantic-Specific Arguments
+
+- **`--num_semantic_classes`**: Number of semantic classes $C$ (default: 19)
+- **`--curriculum_initial_difficulty`**: Initial difficulty $d_0$ (default: 0.1)
+- **`--curriculum_increment`**: Difficulty increment rate $\alpha$ (default: 0.1)
+- **`--curriculum_max_difficulty`**: Maximum difficulty $d_{\max}$ (default: 1.0)
+
+#### Pose Loss Arguments
+
+- **`--loss_learnable`**: Use learnable loss weights (default: False)
+- **`--loss_norm`**: Norm for pose error (`2` for L2, `1` for L1)
+- **`--s_x`**: Weight for translation loss (default: 1.0)
+- **`--s_q`**: Weight for rotation loss (default: 1.0)
+
+### Evaluation Metrics
+
+**Translation Error:**
+$$E_t = \|\mathbf{t}_{\text{gt}} - \hat{\mathbf{t}}\|_2$$
+
+**Rotation Error:**
+$$E_r = 2 \arccos(|\mathbf{q}_{\text{gt}} \cdot \hat{\mathbf{q}}|) \cdot \frac{180}{\pi}$$
+
+where $\mathbf{q}$ are quaternions derived from rotation matrices.
+
+**Success Rates:**
+- **5cm/5deg:** Percentage of poses with $E_t < 0.05$ m and $E_r < 5°$
+- **2cm/2deg:** Percentage of poses with $E_t < 0.02$ m and $E_r < 2°$
+
+**Uncertainty Calibration:**
+- **Expected Calibration Error (ECE):** Measures correlation between predicted uncertainty and actual error
+- **Uncertainty-Error Correlation:** Pearson correlation coefficient between $\sigma_{\text{total}}$ and prediction error
+
+### Implementation Details
+
+**Monte Carlo Dropout:** For epistemic uncertainty estimation, dropout is enabled during inference:
+- Dropout probability: 0.1 (standard)
+- Number of samples: 10 (configurable via `--mc_samples`)
+
+**MDN Training:** Numerical stability is ensured by:
+- Clamping log-variance: $\log \boldsymbol{\sigma}^2 \in [-10, 10]$
+- Using log-sum-exp trick for NLL computation
+
+**Semantic Synthesis:** Semantic regions are manipulated via:
+- Appearance modification: Color shifts, brightness adjustments
+- Occlusion: Masking semantic regions
+- Geometric transformation: Perturbing semantic region geometry
+
+These modifications are applied with magnitude proportional to curriculum difficulty $d_t$.
 
 ## Citation
 
@@ -164,6 +367,21 @@ If you use RAP-ID in your research, please cite both this work and the original 
   booktitle={International Conference on Computer Vision (ICCV)}
 }
 ```
+
+## References
+
+1. **Uncertainty Estimation in Deep Learning:**
+   - Kendall, A., & Gal, Y. (2017). What uncertainties do we need in bayesian deep learning for computer vision? NeurIPS.
+   - Gal, Y., & Ghahramani, Z. (2016). Dropout as a bayesian approximation. ICML.
+
+2. **Mixture Density Networks:**
+   - Bishop, C. M. (1994). Mixture density networks. Technical Report.
+
+3. **Adversarial Training:**
+   - Goodfellow, I., et al. (2014). Generative adversarial nets. NeurIPS.
+
+4. **Curriculum Learning:**
+   - Bengio, Y., et al. (2009). Curriculum learning. ICML.
 
 ## Acknowledgments
 
