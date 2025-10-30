@@ -1,58 +1,193 @@
 <p align="center">
-  <h1 align="center">😎 RAP<br>Unleashing the Power of Data Synthesis <br> in Visual Localization </h1>
-  <h3 align="center">ICCV 2025</h3>
+  <h1 align="center">🚀 RAP-ID<br>Robust Absolute Pose Regression<br>with Improvements & Extensions</h1>
+  <h3 align="center">Enhanced Fork of RAP</h3>
   <p align="center">
-    <a href="https://scholar.google.com/citations?user=90IoeJsAAAAJ">Sihang Li*</a>
-    ·
-    <a href="https://github.com/kevintsq">Siqi Tan*</a>
-    ·
-    <a href="https://karlcbw.github.io/">Bowen Chang</a>
-    ·
-    <a href="https://scholar.google.com/citations?hl=zh-CN&user=fRGFTaEAAAAJ">Jing Zhang</a>
-    ·
-    <a href="https://scholar.google.com/citations?hl=en&user=YeG8ZM0AAAAJ">Chen Feng</a>
-    ·
-    <a href="https://scholar.google.com/citations?user=i_aajNoAAAAJ">Yiming Li</a>
+    <a href="https://github.com/Shivam-Bhardwaj">Shivam Bhardwaj</a>
   </p>
   <p align="center">
-    * Equal contribution
+    Forked from <a href="https://github.com/ai4ce/RAP">ai4ce/RAP</a> | 
+    <a href="https://ai4ce.github.io/RAP/static/RAP_Paper.pdf">Original Paper</a>
   </p>
-  <h2 align="center">
-    <a href="https://ai4ce.github.io/RAP/static/RAP_Paper.pdf">Paper</a> | 
-    <a href="https://ai4ce.github.io/RAP/">Project Page</a>
-  </h2>
-  <div align="center"></div>
-<br/>
-<p align="center">
-    <!-- <video width="100%" controls>
-        <source src="./assets/hospital.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video> -->
-    <img src="./assets/image.png" alt="example" width=100%>
-    <br>
-    <em>TLDR: We make camera localization more generalizable by addressing the data gap via 3DGS and learning gap via a two-branch joint learning with adversarial loss, achieving localization accuracy surpassing 1cm/0.3° in indoor scenarios, 20cm/0.5° in outdoor scenarios, and 10cm/0.2° in driving scenarios.</em>
 </p>
 
-## ✨ New Features
+## 📋 Overview
 
-This update introduces several major extensions to the RAP system, enhancing its capabilities in uncertainty estimation, handling pose ambiguity, and robustness to semantic scene changes.
+**RAP-ID** (RAP with Improvements & Extensions) is an enhanced fork of the [RAP](https://github.com/ai4ce/RAP) system for 6-DoF camera localization. This fork extends the original RAP architecture with three major improvements:
 
-- **Uncertainty-Aware Adversarial Synthesis (UAAS):** The model can now predict pose uncertainty, which is used to guide the synthesis of new training data in high-uncertainty areas.
-- **Multi-Hypothesis Probabilistic APR:** Instead of a single pose, the model can now output multiple pose hypotheses, allowing for better handling of ambiguous scenes.
-- **Semantic-Adversarial Scene Synthesis:** The training pipeline now incorporates semantic information, enabling the generation of adversarially challenging scenes with targeted semantic modifications.
+1. **Uncertainty-Aware Adversarial Synthesis (UAAS)** - Predicts pose uncertainty and uses it to guide training data synthesis
+2. **Multi-Hypothesis Probabilistic APR** - Handles pose ambiguity through probabilistic multi-hypothesis predictions
+3. **Semantic-Adversarial Scene Synthesis** - Generates challenging training samples through semantic-aware scene manipulation
 
-A new unified training script `RAP/train.py` and an extended benchmarking script `RAP/benchmark_speed.py` are included to support these new features.
+These extensions address key limitations in visual localization: uncertainty quantification, handling ambiguous scenes, and robustness to semantic scene variations.
 
-## 🔊 News
+## ✨ Key Features
 
-- 2025/6/25: Our paper is accepted to ICCV 2025! 🎉 Code is released! Data and checkpoints will be released as soon as we have access to the server that has been undergoing maintenance. The latest results in the paper will also be updated soon.
-- 2024/12/1: Our paper is now available on [arXiv](https://arxiv.org/abs/2412.00138)!
+### 🔮 Uncertainty-Aware Adversarial Synthesis (UAAS)
 
-## ⚙️ Setup
+The UAAS module extends RAPNet to output both pose predictions and explicit uncertainty estimates (epistemic and aleatoric). Key components:
+
+- **Uncertainty Prediction**: Model outputs log-variance estimates for pose uncertainty
+- **Targeted Data Synthesis**: Uses uncertainty estimates to guide 3DGS rendering toward high-uncertainty regions
+- **Uncertainty-Weighted Adversarial Loss**: Discriminator prioritizes domain adaptation in uncertain regions
+- **Visualization Tools**: Utilities for visualizing uncertainty across training sets and synthetic samples
+
+**Usage:**
+```bash
+python train.py --config configs/7scenes.txt --trainer_type uaas --run_name experiment_uaas
+```
+
+### 🎯 Multi-Hypothesis Probabilistic APR
+
+Replaces single-point pose predictions with probabilistic outputs capable of expressing multiple plausible pose hypotheses:
+
+- **Mixture Density Network (MDN)**: Models pose distribution as a mixture of Gaussians
+- **Hypothesis Ranking**: Validates hypotheses using 3DGS rendering and image comparison
+- **Ambiguity Resolution**: Downstream selection and refinement modules resolve pose ambiguity
+
+**Usage:**
+```bash
+python train.py --config configs/7scenes.txt --trainer_type probabilistic --run_name experiment_prob
+```
+
+### 🎨 Semantic-Adversarial Scene Synthesis
+
+Incorporates semantic segmentation into the training pipeline for targeted scene manipulation:
+
+- **Semantic Integration**: Scene annotated by semantic classes (sky, building, road, etc.)
+- **Targeted Appearance Variations**: 3DGS synthesizer produces variations targeting specific semantic regions
+- **Adversarial Hard Negative Mining**: Creates synthetic scenes designed to maximize prediction errors
+- **Curriculum Learning**: Gradually increases synthetic scene difficulty based on model performance
+
+**Usage:**
+```bash
+python train.py --config configs/7scenes.txt --trainer_type semantic --run_name experiment_semantic --num_semantic_classes 19
+```
+
+## 🏗️ Architecture
+
+### Module Structure
+
+```
+RAP-ID/
+├── uaas/                    # Uncertainty-Aware Adversarial Synthesis
+│   ├── uaas_rap_net.py      # Extended RAPNet with uncertainty head
+│   ├── loss.py              # Uncertainty-weighted adversarial loss
+│   ├── sampler.py           # Uncertainty-guided data sampling
+│   └── trainer.py           # UAAS training loop
+├── probabilistic/           # Multi-Hypothesis Probabilistic APR
+│   ├── probabilistic_rap_net.py  # MDN-based pose prediction
+│   ├── loss.py              # Mixture NLL loss
+│   ├── hypothesis_validator.py   # Hypothesis ranking via rendering
+│   ├── selection.py         # Best hypothesis selection
+│   └── trainer.py           # Probabilistic training loop
+├── semantic/               # Semantic-Adversarial Scene Synthesis
+│   ├── semantic_rap_net.py  # Semantic-aware RAPNet
+│   ├── semantic_synthesizer.py  # Semantic scene manipulation
+│   ├── hard_negative_miner.py    # Adversarial hard negative mining
+│   ├── curriculum.py        # Curriculum learning scheduler
+│   └── trainer.py           # Semantic training loop
+├── common/                  # Shared utilities
+│   └── uncertainty.py      # Uncertainty calculation and visualization
+└── train.py                 # Unified training script
+```
+
+## 🚀 Quick Start
+
+### Installation
+
+1. Clone this repository:
+
+```sh
+git clone https://github.com/Shivam-Bhardwaj/RAP.git
+cd RAP
+```
+
+2. Install dependencies (Python 3.11+, PyTorch 2.0+, CUDA):
+
+```sh
+pip install -r requirements.txt
+```
+
+See the [original RAP setup instructions](#-setup-instructions-from-original-rap) for detailed environment requirements.
+
+### Training
+
+Use the unified training script with different trainer types:
+
+```bash
+# Train UAAS model
+python train.py --config configs/7scenes.txt --trainer_type uaas --run_name my_uaas_exp
+
+# Train Probabilistic model
+python train.py --config configs/7scenes.txt --trainer_type probabilistic --run_name my_prob_exp
+
+# Train Semantic model
+python train.py --config configs/7scenes.txt --trainer_type semantic --run_name my_semantic_exp --num_semantic_classes 19
+```
+
+### Benchmarking
+
+Evaluate trained models:
+
+```bash
+# Benchmark rendering speed and pose accuracy
+python benchmark_speed.py --model_path /path/to/model --benchmark_pose --model_type uaas
+```
+
+Supported model types: `uaas`, `probabilistic`, `semantic`, `baseline`
+
+## 📊 Evaluation
+
+**Note:** Evaluation results will be added after running experiments. Metrics to include:
+
+- **Generalization:** Pose accuracy on held-out test sets and novel datasets
+- **Calibrated Uncertainty:** Correlation between predicted uncertainty and prediction error (UAAS)
+- **Ambiguity Handling:** Multi-modal pose predictions in ambiguous scenes (Probabilistic)
+- **Error Reduction:** Performance improvement over baseline RAP across benchmarks
+
+## 📚 Citation
+
+If you use RAP-ID in your research, please cite both this work and the original RAP paper:
+
+```bibtex
+@misc{bhardwaj2025rapid,
+  title={RAP-ID: Robust Absolute Pose Regression with Improvements \& Extensions},
+  author={Shivam Bhardwaj},
+  year={2025},
+  howpublished={\url{https://github.com/Shivam-Bhardwaj/RAP}}
+}
+
+@inproceedings{Li2025unleashing,
+  title={Unleashing the Power of Data Synthesis},
+  author={Sihang Li and Siqi Tan and Bowen Chang and Jing Zhang and Chen Feng and Yiming Li},
+  year={2025},
+  booktitle={International Conference on Computer Vision (ICCV)}
+}
+```
+
+## 🙏 Acknowledgments
+
+This work is built upon the excellent [RAP](https://github.com/ai4ce/RAP) system by Sihang Li, Siqi Tan, Bowen Chang, Jing Zhang, Chen Feng, and Yiming Li. The original RAP paper was accepted to ICCV 2025.
+
+The original RAP repository is built on [Gaussian-Wild](https://github.com/EastbeanZhang/Gaussian-Wild), [Deblur-GS](https://github.com/Chaphlagical/Deblur-GS), and [DFNet](https://github.com/ActiveVisionLab/DFNet).
+
+## 🔗 Links
+
+- **Original RAP Repository:** https://github.com/ai4ce/RAP
+- **Original Paper:** https://ai4ce.github.io/RAP/static/RAP_Paper.pdf
+- **Project Page:** https://ai4ce.github.io/RAP/
+
+---
+
+## 📋 Setup Instructions (from Original RAP)
+
+*The following section contains setup instructions from the original RAP repository for reference.*
+
+### Requirements
 
 The current implementation stores the entire training set in memory, requiring approximately 16GB of RAM (training 3DGS on the office scene with depth regularization may require more than 64GB).
 
-Running RAP on a single device requires a CUDA-compatible GPU, with 24GB VRAM recommended.
+Running RAP-ID on a single device requires a CUDA-compatible GPU, with 24GB VRAM recommended.
 
 We also support training RAPNet and rendering 3DGS in parallel on different devices. If you choose to do so, ensure that `args.device != args.render_device`. This is the default behavior when using the BRISQUE score to filter out low-quality rendered images (i.e., `args.brisque_threshold != 0`). The current implementation calculates the BRISQUE score on the CPU due to its better SVM model, which, despite optimizations achieving ~70 FPS, remains slower than a GPU version.
 
@@ -63,7 +198,7 @@ Post-refinement requires a CUDA-compatible GPU with at least 6GB of VRAM.
 1. Clone the repository in recursive mode as it contains submodules:
 
    ```sh
-   git clone https://github.com/ai4ce/RAP --recursive
+   git clone https://github.com/Shivam-Bhardwaj/RAP.git --recursive
    ```
 
 2. Make sure you have an environment with Python 3.11+ and CUDA Toolkit `nvcc` compiler accessible from the command line.
@@ -92,31 +227,6 @@ Post-refinement requires a CUDA-compatible GPU with at least 6GB of VRAM.
    > pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
    > ```
 
-## 📦 Data (Coming Soon)
-
-| Name                           | Dataset                                                      | COLMAP                 | 3DGS                       | Weights |
-| ------------------------------ | ------------------------------------------------------------ | ---------------------- | -------------------------- | ------- |
-| Cambridge Landmarks            | `utils/setup_cambridge.py` (In fact, only COLMAP is needed)  | (Undistorted)          |                            |         |
-| 7Scenes (SfM)                  | Only COLMAP is needed                                        |                        |                            |         |
-| 7Scenes (DSLAM, Deprecated)    | [Download](https://www.microsoft.com/en-us/research/project/rgb-d-dataset-7-scenes/) | (Training Set Only)    |                            |         |
-| MARS                           | Only COLMAP is needed                                        | (Not in metric scale*) |                            |         |
-| St. George’s Basilica Building | Only COLMAP is needed                                        |                        | (Trained with testing set) |         |
-| Aachen Subset                  | Only COLMAP is needed                                        | (Not in metric scale)  |                            |         |
-
-*Scale multipliers for MARS:
-
-| Sequence   | 11     | 15     | 37      | 41   |
-| ---------- | ------ | ------ | ------- | ---- |
-| Multiplier | 7.2162 | 6.6005 | 7.68605 | 7.67 |
-
-### 🛠️ Custom Datasets
-
-You can place all images (including both the training and test sets) in an images folder and use `utils/run_colmap.sh` (Linux) or `utils/run_colmap.ps1` (Windows) to convert them into a COLMAP-format dataset. Ensure that all images are the same size and captured with the same camera using a fixed focal length. When running `colmap feature_extractor`, set `--ImageReader.single_camera 1`; otherwise, ambiguities may arise during translation estimation, since our model does not have access to focal length information.
-
-To specify the test set, create a `list_test.txt` file in the same directory as the `images` and `sparse` folders.
-
-We recommend using SfM poses to train 3DGS, as poor camera poses can significantly degrade rendering quality. If you have GPS/IMU data, you can either compute a scale factor to convert translations to metric units or apply a transformation matrix after training to align the output with the real-world coordinate system, since COLMAP outputs are not in metric scale.
-
 ## 🎨 Training, Rendering, and Evaluating 3DGS
 
 ```sh
@@ -129,7 +239,7 @@ If you want to use depth supervision for datasets that do not come with metric d
 
 > Note that for 3DGS-related arguments, only `-s, --source_path` and `-m, --model_path` will be taken from the command line when running `render.py`, `rap.py`, and `refine.py`. Other arguments will be loaded from `cfg_args` in the 3DGS model directory. If you want to change some arguments, you may just edit the `cfg_args` file, or assign values in the code.
 
-## 🚀 Running RAP
+## 🚀 Running Original RAP
 
 ```sh
 python rap.py -c configs/actual_config_file.txt -m /path/to/3dgs
@@ -144,83 +254,5 @@ Due to uncontrollable randomness, the computation order of floating-point number
 ```sh
 python refine.py -c configs/actual_config_file.txt -m /path/to/3dgs
 ```
+
 Post-refinement is more CPU-intensive than other tasks.
-
-## 🙏 Acknowledgement
-
-This work was supported in part through NSF grants 2238968, 2121391, and 2024882, and the NYU IT High Performance Computing resources, services, and staff expertise. Yiming Li is supported by NVIDIA Graduate Fellowship.
-
-This repo is built on [Gaussian-Wild](https://github.com/EastbeanZhang/Gaussian-Wild), [Deblur-GS](https://github.com/Chaphlagical/Deblur-GS), and [DFNet](https://github.com/ActiveVisionLab/DFNet), with a major refactor for efficiency, maintainability, and scalability. [MASt3R](https://github.com/naver/mast3r) should have been organized as a submodule, but due to import path issues, it is copied to the root directory of our repo. Thanks for their great work!
-
-## 📚 BibTeX
-If you find our work helpful, please consider citing our paper!
-```
-@inproceedings{Li2025unleashing,
- title={Unleashing the Power of Data Synthesis},
- author={Sihang Li and Siqi Tan and Bowen Chang and Jing Zhang and Chen Feng and Yiming Li},
- year={2025},
- booktitle={International Conference on Computer Vision (ICCV)}
-}
-```
-
-### New Modules
-
-- **Uncertainty-Aware Adversarial Synthesis (UAAS)**: Located in `RAP/uaas/`.
-  - `uaas_rap_net.py`: `UAASRAPNet` model with uncertainty prediction head.
-  - `loss.py`: `UncertaintyWeightedAdversarialLoss`.
-  - `sampler.py`: `UncertaintySampler` for targeted data generation.
-  - `trainer.py`: `UAASTrainer` to orchestrate the training.
-
-- **Multi-Hypothesis Probabilistic APR**: Located in `RAP/probabilistic/`.
-  - `probabilistic_rap_net.py`: `ProbabilisticRAPNet` with MDN head.
-  - `loss.py`: `MixtureNLLLoss` for training the MDN.
-  - `hypothesis_validator.py`: `HypothesisValidator` for ranking poses.
-  - `selection.py`: `HypothesisSelector` for choosing the best pose.
-  - `trainer.py`: `ProbabilisticTrainer`.
-
-- **Semantic-Adversarial Scene Synthesis**: Located in `RAP/semantic/`.
-  - `semantic_rap_net.py`: `SemanticRAPNet`.
-  - `semantic_synthesizer.py`: `SemanticSynthesizer` for scene manipulation.
-  - `hard_negative_miner.py`: `HardNegativeMiner`.
-  - `curriculum.py`: `Curriculum` learning scheduler.
-  - `trainer.py`: `SemanticTrainer`.
-
-- **Common Utilities**: Located in `RAP/common/`.
-  - `uncertainty.py`: Shared functions for uncertainty calculation and visualization.
-
-## Training
-
-To train one of the new models, use the `RAP/train.py` script. You must specify the `trainer_type` to select the desired model and training loop.
-
-**Example:**
-
-```bash
-python RAP/train.py --config configs/7scenes.txt --trainer_type uaas --run_name 7scenes_uaas_experiment
-```
-
-- `--trainer_type`: Choose from `uaas`, `probabilistic`, or `semantic`.
-- `--config`: Path to the dataset and model configuration file.
-- `--run_name`: A name for the training run, used for logging.
-
-## Benchmarking
-
-The `RAP/benchmark_speed.py` script has been extended to evaluate the new models on both rendering speed and pose accuracy.
-
-**Example:**
-
-```bash
-python RAP/benchmark_speed.py --model_path /path/to/your/trained/model --benchmark_pose --model_type uaas
-```
-
-- `--model_path`: Path to the directory containing the trained model checkpoint.
-- `--benchmark_pose`: A flag to enable pose accuracy evaluation.
-- `--model_type`: The type of model to benchmark (`uaas`, `probabilistic`, `semantic`, or `baseline`).
-
-## Evaluation Results
-
-*This section should be filled in with tables and figures summarizing the experimental results after running the training and benchmarking scripts.*
-
-- **Generalization:** Compare pose accuracy on held-out test sets and novel datasets.
-- **Calibrated Uncertainty:** For the UAAS model, visualize uncertainty maps and analyze the correlation between predicted uncertainty and prediction error.
-- **Ambiguity Handling:** For the probabilistic model, show examples of multi-modal pose predictions in ambiguous scenes.
-- **Error Reduction:** Demonstrate the reduction in pose error compared to the baseline RAP model across different benchmarks.
