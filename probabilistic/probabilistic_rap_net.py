@@ -23,8 +23,11 @@ class ProbabilisticRAPNet(RAPNet):
         
         pi = D.Categorical(logits=pi_logits)
         mus = mu.view(-1, self.num_gaussians, 6)
-        sigmas = torch.exp(log_sigma).view(-1, self.num_gaussians, 6)
-        
+        # Clamp log_sigma for numerical stability
+        log_sigma_clamped = torch.clamp(log_sigma, min=-10, max=10)
+        sigmas = torch.exp(log_sigma_clamped).view(-1, self.num_gaussians, 6)
+        # Ensure minimum sigma to avoid numerical issues
+        sigmas = torch.clamp(sigmas, min=1e-6)
         component_distribution = D.Independent(D.Normal(loc=mus, scale=sigmas), 1)
         mixture_distribution = D.MixtureSameFamily(pi, component_distribution)
 
