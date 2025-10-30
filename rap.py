@@ -1,4 +1,5 @@
 import json
+import os
 
 import wandb
 from torch import optim, autocast, nn
@@ -62,8 +63,9 @@ class BaseTrainer:
         kwargs = dict(data_path=args.datadir, hw=self.rap_hw, hw_gs=gs_hw)
         train_set = dataset_class(train=True, train_skip=args.train_skip, **kwargs)
         val_set = dataset_class(train=False, test_skip=args.test_skip, **kwargs)
-        train_dl = DataLoader(train_set, batch_size=1, shuffle=True, num_workers=1)  # all data will be in the memory
-        self.val_dl = DataLoader(val_set, batch_size=args.val_batch_size, shuffle=False, num_workers=args.val_num_workers)
+        # Optimized: increase num_workers for faster data loading (data is already in memory anyway)
+        train_dl = DataLoader(train_set, batch_size=1, shuffle=True, num_workers=min(4, os.cpu_count() or 1), pin_memory=True)
+        self.val_dl = DataLoader(val_set, batch_size=args.val_batch_size, shuffle=False, num_workers=args.val_num_workers, pin_memory=True)
 
         self.model = RAPNet(args).to(args.device)
 
@@ -129,10 +131,11 @@ class BaseTrainer:
             batch_indexes = selected_indexes[i_batch:i_batch + batch_size]
             i_batch += batch_size
 
-            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device)
-            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float)
-            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device) if imgs_perturbed is not None else None
-            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float) if poses_perturbed is not None else None
+            # Optimized: pre-allocate on device, use non_blocking for faster transfers
+            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device, non_blocking=True)
+            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True)
+            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device, non_blocking=True) if imgs_perturbed is not None else None
+            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True) if poses_perturbed is not None else None
 
             # Use autocast for mixed precision
             with autocast(device, enabled=self.args.amp, dtype=self.args.amp_dtype):
@@ -267,11 +270,12 @@ class RVSTrainer(BaseTrainer):
             batch_indexes = selected_indexes[i_batch:i_batch + batch_size]
             i_batch += batch_size
 
-            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device)
-            imgs_rendered_batch = self.imgs_rendered[batch_indexes].to(device)
-            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float)
-            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device)
-            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float)
+            # Optimized: use non_blocking for faster transfers
+            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device, non_blocking=True)
+            imgs_rendered_batch = self.imgs_rendered[batch_indexes].to(device, non_blocking=True)
+            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True)
+            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device, non_blocking=True)
+            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True)
 
             # Use autocast for mixed precision
             with autocast(device, enabled=self.args.amp, dtype=self.args.amp_dtype):
@@ -341,11 +345,12 @@ class RVSWithDiscriminatorTrainer(RVSTrainer):
             batch_indexes = selected_indexes[i_batch:i_batch + batch_size]
             i_batch += batch_size
 
-            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device)
-            imgs_rendered_batch = self.imgs_rendered[batch_indexes].to(device)
-            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float)
-            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device)
-            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float)
+            # Optimized: use non_blocking for faster transfers
+            imgs_normed_batch = self.imgs_normed[batch_indexes].to(device, non_blocking=True)
+            imgs_rendered_batch = self.imgs_rendered[batch_indexes].to(device, non_blocking=True)
+            poses_batch = self.poses[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True)
+            imgs_perturbed_batch = imgs_perturbed[batch_indexes].to(device, non_blocking=True)
+            poses_perturbed_batch = poses_perturbed[batch_indexes].reshape(batch_size, 12).to(device, torch.float, non_blocking=True)
 
             # Use autocast for mixed precision
             with autocast(device, enabled=self.args.amp, dtype=self.args.amp_dtype):

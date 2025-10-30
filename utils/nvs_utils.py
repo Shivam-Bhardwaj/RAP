@@ -415,7 +415,7 @@ class GaussianRenderer(SpawnProcess):
                 # resize
                 rendering = F.interpolate(rendering[None], size=self.hw, mode='bilinear', align_corners=False)[0]
                 normalized = rendering.sub(self.mean).div_(self.std)
-                rendered_imgs.append(normalized.cpu())
+                rendered_imgs.append(normalized)  # Keep on GPU, move to CPU at end
                 if self.configs.vis_rvs:
                     rendering_np = rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
                     rendering_np = cv.cvtColor(rendering_np, cv.COLOR_RGB2BGR)  # (480, 854, 3)
@@ -424,7 +424,9 @@ class GaussianRenderer(SpawnProcess):
             print("Failed to sample appearance. Try decreasing RVS ranges.")
             raise e
         self.gaussians.colornet_inter_weight = 1.0
-        return torch.stack(rendered_imgs)  # torch.Size([115, 3, 240, 427])
+        # Optimized: stack on GPU, then move to CPU once (faster than moving each tensor)
+        stacked = torch.stack(rendered_imgs)
+        return stacked.cpu() if stacked.device.type == 'cuda' else stacked  # torch.Size([115, 3, 240, 427])
 
     def run(self):
         self.load_gaussians()
@@ -494,9 +496,12 @@ class GaussianRendererWithAttempts(GaussianRenderer):
                               render_device=self.configs.render_device, data_device=self.configs.render_device)
                 rendering = self.gaussians.render(view, self.configs, self.background)["render"]
             perturbed_poses.append(best_pose)
+            # Optimized: use best_rendering if available, keep on GPU
+            if best_rendering is not None:
+                rendering = best_rendering
             rendering = F.interpolate(rendering[None], size=self.hw, mode='bilinear', align_corners=False)[0]
             normalized = rendering.sub(self.mean).div_(self.std)
-            rendered_imgs.append(normalized.cpu())
+            rendered_imgs.append(normalized)  # Keep on GPU
             if self.configs.vis_rvs:
                 rendering_np = rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
                 rendering_np = cv.cvtColor(rendering_np, cv.COLOR_RGB2BGR)  # (480, 854, 3)
@@ -586,14 +591,20 @@ class GaussianRendererWithBrisqueAttempts(GaussianRendererWithAttempts):
                 best_rendering = self.gaussians.render(best_view, self.configs, self.background)["render"]
                 best_rendering = F.interpolate(best_rendering[None], size=self.hw, mode='bilinear', align_corners=False)[0]
             normalized = best_rendering.sub(self.mean).div_(self.std)
-            rendered_imgs.append(normalized.cpu())
+            rendered_imgs.append(normalized)  # Keep on GPU, move to CPU at end
             if self.configs.vis_rvs:
                 rendering_np = best_rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
                 rendering_np = cv.cvtColor(rendering_np, cv.COLOR_RGB2BGR)  # (480, 854, 3)
                 cv.imwrite(safe_path(f"{render_path}/{img_name}_acc_{min_score:.2f}.jpg"), rendering_np,
                            [int(cv.IMWRITE_JPEG_QUALITY), 100])
         self.gaussians.colornet_inter_weight = 1.0
-        return torch.stack(perturbed_poses), torch.stack(rendered_imgs)  # torch.Size([115, 3, 240, 427])
+        # Optimized: stack on GPU, then move to CPU once
+        stacked_poses = torch.stack(perturbed_poses)
+        stacked_imgs = torch.stack(rendered_imgs)
+        # Move to CPU only if needed for multiprocessing queue
+        if stacked_imgs.device.type == 'cuda':
+            return stacked_poses.cpu(), stacked_imgs.cpu()
+        return stacked_poses, stacked_imgs  # torch.Size([115, 3, 240, 427])
 
 
 def slerp(q0, q1, t):
