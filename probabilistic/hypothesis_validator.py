@@ -181,16 +181,59 @@ class HypothesisValidator:
         return score
     
     def _ssim(self, img1: torch.Tensor, img2: torch.Tensor, window_size: int = 11) -> float:
-        """Compute SSIM between two images."""
-        # Simplified SSIM implementation
-        # Full implementation would use Gaussian window
+        """Compute SSIM between two images using proper Gaussian window."""
+        from torch.nn import functional as F
+        
+        # Ensure batch dimension
         if img1.dim() == 3:
             img1 = img1.unsqueeze(0)
         if img2.dim() == 3:
             img2 = img2.unsqueeze(0)
         
-        # Simple mean squared error as approximation
-        mse = F.mse_loss(img1, img2)
-        # Convert MSE to similarity (inverse)
-        similarity = 1.0 / (1.0 + mse.item())
-        return similarity
+        # Constants
+        C1 = 0.01 ** 2
+        C2 = 0.03 ** 2
+        
+        # Create Gaussian window
+        def gaussian_window(size, sigma=1.5):
+            coords = torch.arange(size, dtype=torch.float32)
+            coords -= size // 2
+            g = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
+            g /= g.sum()
+            return g.unsqueeze(0)
+        
+        # Create 2D Gaussian window
+        gauss_1d = gaussian_window(window_size)
+        gauss_2d = gauss_1d[:, None] * gauss_1d[None, :]
+        gauss_2d = gauss_2d.view(1, 1, window_size, window_size)
+        
+        # Pad and move to device
+        pad = window_size // 2
+        gauss_2d = gauss_2d.to(img1.device)
+        
+        # Convert to grayscale if needed (average across channels)
+        if img1.shape[1] == 3:
+            mu1 = F.conv2d(F.pad(img1.mean(dim=1, keepdim=True), (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            mu2 = F.conv2d(F.pad(img2.mean(dim=1, keepdim=True), (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+        else:
+            mu1 = F.conv2d(F.pad(img1, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            mu2 = F.conv2d(F.pad(img2, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+        
+        mu1_sq = mu1 ** 2
+        mu2_sq = mu2 ** 2
+        mu1_mu2 = mu1 * mu2
+        
+        # Compute sigma
+        if img1.shape[1] == 3:
+            sigma1_sq = F.conv2d(F.pad((img1.mean(dim=1, keepdim=True) - mu1) ** 2, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            sigma2_sq = F.conv2d(F.pad((img2.mean(dim=1, keepdim=True) - mu2) ** 2, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            sigma12 = F.conv2d(F.pad((img1.mean(dim=1, keepdim=True) - mu1) * (img2.mean(dim=1, keepdim=True) - mu2), (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+        else:
+            sigma1_sq = F.conv2d(F.pad((img1 - mu1) ** 2, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            sigma2_sq = F.conv2d(F.pad((img2 - mu2) ** 2, (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+            sigma12 = F.conv2d(F.pad((img1 - mu1) * (img2 - mu2), (pad, pad, pad, pad), mode='reflect'), gauss_2d, padding=0)
+        
+        # Compute SSIM
+        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+        
+        return ssim_map.mean().item()

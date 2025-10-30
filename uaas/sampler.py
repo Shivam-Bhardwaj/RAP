@@ -189,11 +189,55 @@ class UncertaintySampler:
                 return self.renderer.render_pose(pose)
             elif hasattr(self.renderer, 'render_single'):
                 return self.renderer.render_single(pose)
+            elif hasattr(self.renderer, 'gaussians') and hasattr(self.renderer, 'cam_params'):
+                # Direct rendering using gaussians (most reliable method)
+                from utils.cameras import Camera
+                from torch.nn import functional as F
+                import numpy as np
+                
+                # Convert pose to camera format
+                colmap_pose = np.eye(4, dtype=np.float32)
+                colmap_pose[:3, :4] = pose
+                pose_inv = np.linalg.inv(colmap_pose)
+                R = pose_inv[:3, :3]
+                T = pose_inv[:3, 3]
+                
+                # Get render device
+                render_device = getattr(self.renderer.configs, 'render_device', 'cuda')
+                if not torch.cuda.is_available():
+                    render_device = 'cpu'
+                
+                # Create camera
+                view = Camera(
+                    uid=None, colmap_id=None, image_name=None,
+                    R=R, T=T, K=self.renderer.cam_params.K,
+                    FoVx=self.renderer.cam_params.FovX, 
+                    FoVy=self.renderer.cam_params.FovY,
+                    image=None, render_device=render_device,
+                    data_device=render_device
+                )
+                
+                # Render
+                bg_color = [1, 1, 1] if getattr(self.renderer.configs, 'white_background', False) else [0, 0, 0]
+                background = torch.tensor(bg_color, dtype=torch.float, device=render_device)
+                
+                rendering = self.renderer.gaussians.render(view, self.renderer.configs, background)["render"]
+                
+                # Normalize
+                rendering = F.interpolate(rendering[None], size=self.renderer.hw, mode='bilinear', align_corners=False)[0]
+                normalized = rendering.sub(self.renderer.mean.to(rendering.device)).div_(self.renderer.std.to(rendering.device))
+                
+                return normalized.cpu()
             else:
-                # Fallback: render using render_set with single pose
-                # This is a simplified version - full implementation would use renderer's API
-                # For now, return None to indicate we can't render directly
-                # The trainer should handle rendering separately
+                # Fallback: use render_perturbed_imgs with single pose
+                if hasattr(self.renderer, 'render_perturbed_imgs'):
+                    poses_batch = torch.from_numpy(pose).float().unsqueeze(0)
+                    imgs = self.renderer.render_perturbed_imgs("temp", poses_batch, disable_tqdm=True)
+                    if len(imgs) > 0:
+                        return imgs[0]
                 return None
-        except Exception:
+        except Exception as e:
+            # Log error but don't crash
+            import warnings
+            warnings.warn(f"Failed to render pose: {e}")
             return None

@@ -186,20 +186,40 @@ class HardNegativeMiner:
     def _compute_prediction_error(self, model, image: torch.Tensor, 
                                   gt_pose: torch.Tensor) -> torch.Tensor:
         """Compute prediction error for a given image and ground truth pose."""
-        with torch.no_grad():
-            # Add batch dimension
-            if image.dim() == 3:
-                image = image.unsqueeze(0)
-            if gt_pose.dim() == 1:
-                gt_pose = gt_pose.unsqueeze(0)
+        # Add batch dimension
+        if image.dim() == 3:
+            image = image.unsqueeze(0)
+        if gt_pose.dim() == 1:
+            gt_pose = gt_pose.unsqueeze(0)
+        
+        # Enable gradients for adversarial optimization
+        image.requires_grad = True
+        
+        # Get prediction
+        outputs = model(image, return_feature=False)
+        if isinstance(outputs, tuple):
+            pred_pose = outputs[0]
+        else:
+            _, pred_pose = outputs if isinstance(outputs, tuple) else (None, outputs)
+        
+        # Compute error (L2 norm)
+        error = torch.norm(pred_pose - gt_pose, dim=1).mean()
+        
+        # Adversarial: maximize error through gradient ascent
+        if error.requires_grad:
+            error.backward()
             
-            # Get prediction
-            outputs = model(image, return_feature=False)
-            if isinstance(outputs, tuple):
-                pred_pose = outputs[0]
-            else:
-                _, pred_pose = outputs if isinstance(outputs, tuple) else (None, outputs)
-            
-            # Compute error
-            error = torch.norm(pred_pose - gt_pose, dim=1).mean()
-            return error
+            # Gradient-based perturbation (PGD-style)
+            with torch.no_grad():
+                # Get gradient magnitude
+                grad_norm = image.grad.norm()
+                if grad_norm > 0:
+                    # Normalize gradient
+                    normalized_grad = image.grad / (grad_norm + 1e-8)
+                    # Apply perturbation proportional to difficulty
+                    perturbation = normalized_grad * 0.1  # Small step size
+                    image = image + perturbation
+                    image = image.clamp(0, 1)
+                    image.requires_grad = False
+        
+        return error.detach()

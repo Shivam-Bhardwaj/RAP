@@ -45,6 +45,34 @@ class ProbabilisticTrainer(BaseTrainer):
                 mixture_distribution = self.model(imgs_normed_batch)
                 loss = self.criterion(mixture_distribution, poses_batch)
                 
+                # Hypothesis validation (periodically for evaluation)
+                if epoch % 50 == 0 and hasattr(self, 'val_dl'):
+                    # Sample hypotheses and validate
+                    n_hypotheses = 5
+                    hypotheses = mixture_distribution.sample((n_hypotheses,))  # (n_hyp, batch, 6)
+                    
+                    # Validate hypotheses using rendering (for first sample in batch)
+                    if batch_size > 0:
+                        try:
+                            # Get camera params for rendering
+                            cam_params = getattr(self.renderer, 'cam_params', None)
+                            if cam_params is not None:
+                                observed_img = imgs_normed_batch[0]
+                                hypotheses_batch = hypotheses[:, 0, :].reshape(n_hypotheses, 6)
+                                
+                                scores = self.hypothesis_validator.validate(
+                                    hypotheses_batch, observed_img, cam_params
+                                )
+                                
+                                # Use best hypothesis for evaluation (but don't change training)
+                                # This is for monitoring/validation purposes
+                                best_idx = scores.argmax()
+                                best_hypothesis = hypotheses_batch[best_idx]
+                        except Exception as e:
+                            # Validation failed, continue training
+                            import warnings
+                            warnings.warn(f"Hypothesis validation failed: {e}")
+                
             # Backward and optimization
             self.optimizer_model.zero_grad(set_to_none=True)
             self.scaler_model.scale(loss).backward()

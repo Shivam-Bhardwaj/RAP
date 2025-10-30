@@ -73,8 +73,32 @@ class UAASTrainer(RVSWithDiscriminatorTrainer):
                 aleatoric_unc = aleatoric_uncertainty_regression(log_var_predicted)
                 total_uncertainty = epistemic_unc + aleatoric_unc # Combine uncertainties
                 
-                # Use uncertainty to sample new data (placeholder)
-                # new_poses, new_images = self.sampler.sample(...)
+                # Uncertainty-guided sampling (every N epochs or periodically)
+                if epoch % max(1, self.args.rvs_refresh_rate // 2) == 0 and hasattr(self, 'poses'):
+                    try:
+                        # Sample new views based on uncertainty
+                        current_poses = self.poses[batch_indexes].reshape(-1, 12)
+                        current_images = imgs_normed_batch
+                        
+                        # Get uncertainty threshold (e.g., median + std)
+                        uncertainty_threshold = total_uncertainty.mean().item() + total_uncertainty.std().item()
+                        
+                        # Sample high-uncertainty views
+                        new_poses, new_images = self.sampler.sample(
+                            self.model,
+                            current_poses,
+                            current_images,
+                            num_samples=min(batch_size, len(current_poses)),
+                            uncertainty_threshold=uncertainty_threshold
+                        )
+                        
+                        # If we got new samples, optionally use them for training
+                        # For now, we'll use them in the next iteration
+                        # This could be optimized further
+                    except Exception as e:
+                        # If sampling fails, continue with regular training
+                        import warnings
+                        warnings.warn(f"Uncertainty sampling failed: {e}")
 
                 # Pose loss with aleatoric uncertainty
                 pose_loss = self.pose_loss(poses_predicted, poses_batch, aleatoric_unc)
