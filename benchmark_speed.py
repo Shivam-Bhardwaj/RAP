@@ -24,9 +24,9 @@ from render import test_rendering_speed, render_set
 from utils.general_utils import fix_seed
 
 # Import new models
-from RAP.uaas.uaas_rap_net import UAASRAPNet
-from RAP.probabilistic.probabilistic_rap_net import ProbabilisticRAPNet
-from RAP.semantic.semantic_rap_net import SemanticRAPNet
+from uaas.uaas_rap_net import UAASRAPNet
+from probabilistic.probabilistic_rap_net import ProbabilisticRAPNet
+from semantic.semantic_rap_net import SemanticRAPNet
 
 
 def benchmark_rendering_speed(args, num_warmup=5, num_iterations=100):
@@ -221,21 +221,12 @@ def main():
     
     # Optionally benchmark pose accuracy
     if args.benchmark_pose:
-        model_map = {
-            "baseline": None, # Should load the original RAPNet
-            "uaas": UAASRAPNet(args),
-            "probabilistic": ProbabilisticRAPNet(args),
-            "semantic": SemanticRAPNet(args, num_semantic_classes=19) # Example number of classes
-        }
-        model = model_map[args.model_type]
-        if model:
-            # Here you would load the trained model weights
-            # model.load_state_dict(...)
-            # And then run the benchmark
-            # benchmark_pose_accuracy(args, model, data_loader)
-            print(f"Pose accuracy benchmarking for {args.model_type} is a placeholder.")
-        else:
-            print("Running baseline pose accuracy benchmark (placeholder).")
+        print("\n" + "=" * 60)
+        print("POSE ACCURACY BENCHMARK")
+        print("=" * 60)
+        print("Note: For comprehensive pose accuracy benchmarking, use:")
+        print(f"  python benchmark_comprehensive.py --model_type {args.model_type} --config <config_file>")
+        print("=" * 60)
 
 
     # Add metadata
