@@ -388,41 +388,91 @@ class GaussianRenderer(SpawnProcess):
         return poses, imgs_normed, imgs_rendered
 
     @torch.no_grad()
-    def render_perturbed_imgs(self, name, poses, indexes=None, disable_tqdm=False):
+    def render_perturbed_imgs(self, name, poses, indexes=None, disable_tqdm=False, batch_size=8):
+        """
+        Render perturbed images with batch processing for better performance.
+        
+        Args:
+            name: Dataset name
+            poses: Tensor of poses [N, 3, 4]
+            indexes: Optional indexes for selecting reference images
+            disable_tqdm: Disable progress bar
+            batch_size: Number of views to render in each batch (default: 8)
+        """
         rendered_imgs = []
         render_path = os.path.join(self.configs.model_path, name, f"ours_{self.epoch}", "virtual_renders")
+        num_poses = len(poses)
+        
         try:
-            for batch_idx, pose in enumerate(tqdm(poses, desc=f"Rendering RVS @ Epoch {self.epoch}", disable=disable_tqdm)):
-                colmap_pose = torch.eye(4, dtype=torch.float)
-                colmap_pose[:3, :4] = pose
-                pose_inv = colmap_pose.inverse().numpy()
-                R = pose_inv[:3, :3]
-                T = pose_inv[:3, 3]
-                if indexes is not None:
-                    ref_img = self.imgs_orig[indexes[batch_idx]]
-                    img_name = self.img_names[indexes[batch_idx]]
-                else:
-                    ref_img = self.imgs_orig[batch_idx]
-                    img_name = self.img_names[batch_idx]
-                view = Camera(uid=None, colmap_id=None, image_name=None, R=R, T=T, K=self.cam_params.K,
-                              FoVx=self.cam_params.FovX, FoVy=self.cam_params.FovY, image=ref_img,
-                              render_device=self.configs.render_device, data_device=self.configs.render_device)
+            # Process in batches for better GPU utilization
+            for batch_start in tqdm(range(0, num_poses, batch_size), desc=f"Rendering RVS @ Epoch {self.epoch}", disable=disable_tqdm):
+                batch_end = min(batch_start + batch_size, num_poses)
+                batch_poses = poses[batch_start:batch_end]
+                batch_size_actual = batch_end - batch_start
+                
+                # Prepare batch cameras
+                batch_views = []
+                batch_img_names = []
+                batch_colornet_weights = []
+                
+                for i, pose in enumerate(batch_poses):
+                    batch_idx = batch_start + i
+                    colmap_pose = torch.eye(4, dtype=torch.float)
+                    colmap_pose[:3, :4] = pose
+                    pose_inv = colmap_pose.inverse().numpy()
+                    R = pose_inv[:3, :3]
+                    T = pose_inv[:3, 3]
+                    
+                    if indexes is not None:
+                        ref_img = self.imgs_orig[indexes[batch_idx]]
+                        img_name = self.img_names[indexes[batch_idx]]
+                    else:
+                        ref_img = self.imgs_orig[batch_idx]
+                        img_name = self.img_names[batch_idx]
+                    
+                    view = Camera(uid=None, colmap_id=None, image_name=None, R=R, T=T, K=self.cam_params.K,
+                                  FoVx=self.cam_params.FovX, FoVy=self.cam_params.FovY, image=ref_img,
+                                  render_device=self.configs.render_device, data_device=self.configs.render_device)
+                    batch_views.append(view)
+                    batch_img_names.append(img_name)
+                    
+                    # Set colornet weight (for batch rendering, we'll use first weight for all)
+                    if self.configs.no_appearance_augmentation:
+                        colornet_weight = 1.0
+                    else:
+                        colornet_weight = np.random.uniform(0, 2)
+                    batch_colornet_weights.append(colornet_weight)
+                
+                # Set colornet weight (use first weight for batch, or average if needed)
                 if self.configs.no_appearance_augmentation:
                     self.gaussians.colornet_inter_weight = 1.0
                 else:
-                    self.gaussians.colornet_inter_weight = np.random.uniform(0, 2)
-                rendering: torch.Tensor = self.gaussians.render(view, self.configs, self.background)["render"]
-                # resize
-                rendering = F.interpolate(rendering[None], size=self.hw, mode='bilinear', align_corners=False)[0]
-                normalized = rendering.sub(self.mean).div_(self.std)
-                rendered_imgs.append(normalized)  # Keep on GPU, move to CPU at end
-                if self.configs.vis_rvs:
-                    rendering_np = rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
-                    rendering_np = cv.cvtColor(rendering_np, cv.COLOR_RGB2BGR)  # (480, 854, 3)
-                    cv.imwrite(safe_path(f"{render_path}/{img_name}.jpg"), rendering_np, [int(cv.IMWRITE_JPEG_QUALITY), 100])
+                    # For batch rendering, we use the first weight
+                    # Individual weights would require separate renders, defeating the purpose
+                    self.gaussians.colornet_inter_weight = batch_colornet_weights[0]
+                
+                # Batch render
+                batch_results = self.gaussians.render_batch(batch_views, self.configs, self.background)
+                
+                # Process batch results
+                for i, result in enumerate(batch_results):
+                    rendering = result["render"]
+                    img_name = batch_img_names[i]
+                    
+                    # Resize
+                    rendering = F.interpolate(rendering[None], size=self.hw, mode='bilinear', align_corners=False)[0]
+                    normalized = rendering.sub(self.mean).div_(self.std)
+                    rendered_imgs.append(normalized)  # Keep on GPU
+                    
+                    if self.configs.vis_rvs:
+                        rendering_np = rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
+                        rendering_np = cv.cvtColor(rendering_np, cv.COLOR_RGB2BGR)  # (480, 854, 3)
+                        cv.imwrite(safe_path(f"{render_path}/{img_name}.jpg"), rendering_np, [int(cv.IMWRITE_JPEG_QUALITY), 100])
+                        
         except IndexError as e:
             print("Failed to sample appearance. Try decreasing RVS ranges.")
             raise e
+        
         self.gaussians.colornet_inter_weight = 1.0
         # Optimized: stack on GPU, then move to CPU once (faster than moving each tensor)
         stacked = torch.stack(rendered_imgs)

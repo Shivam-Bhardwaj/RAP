@@ -13,6 +13,8 @@ import logging
 import os
 
 import numpy as np
+import torch
+from torch.nn import functional as F
 from gsplat import rasterization
 from plyfile import PlyData, PlyElement
 from sklearn.neighbors import NearestNeighbors
@@ -707,6 +709,123 @@ class GaussianModel:
         grad[:, 1] *= height * 0.5
         self.xyz_gradient_accum[update_filter] += torch.norm(grad[update_filter, :2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
+
+    def render_batch(self, viewpoint_cameras, pipe, bg_color: torch.Tensor, scaling_modifier=1.0, 
+                     override_colors=None, store_cache=False, use_cache=False, point_features=None,
+                     interp_alpha=0.0):
+        """
+        Batch render multiple cameras simultaneously.
+        
+        Args:
+            viewpoint_cameras: List of Camera objects or single Camera (will be converted to list)
+            pipe: Pipeline parameters
+            bg_color: Background color tensor [C, 3] or [3] (will be broadcast)
+            Other args same as render()
+            
+        Returns:
+            List of render dictionaries, same format as render()
+        """
+        # Handle single camera case
+        if not isinstance(viewpoint_cameras, (list, tuple)):
+            viewpoint_cameras = [viewpoint_cameras]
+        
+        C = len(viewpoint_cameras)
+        
+        # All cameras should have same dimensions for batch rendering
+        width = int(viewpoint_cameras[0].image_width)
+        height = int(viewpoint_cameras[0].image_height)
+        
+        # Check all cameras have same dimensions
+        for cam in viewpoint_cameras:
+            if int(cam.image_width) != width or int(cam.image_height) != height:
+                raise ValueError(f"All cameras must have same dimensions for batch rendering. "
+                               f"Found {width}x{height} and {int(cam.image_width)}x{int(cam.image_height)}")
+        
+        # Prepare gaussians (use first camera for forward pass)
+        if use_cache:
+            self.forward_cache(viewpoint_cameras[0])
+        elif point_features is not None:
+            self.forward_interpolate(viewpoint_cameras[0], point_features)
+        else:
+            self.forward(viewpoint_cameras[0], store_cache)
+        
+        means3D = self._xyz_dealt
+        if pipe.deblur:
+            # For deblur, we'd need to handle each camera separately
+            # For now, use first camera's transform
+            gaussian_trans = viewpoint_cameras[0].get_gaussian_trans(interp_alpha)
+            means3D = F.pad(means3D, (0, 1), "constant", 1.0) @ gaussian_trans.T
+        
+        opacity = self.get_opacity_dealt  # [n_points, 1]
+        scales = self.get_scaling * scaling_modifier
+        rotations = self.get_rotation
+        
+        if self.use_colors_precomp:
+            override_colors = self.get_colors  # [N, 3]
+        if override_colors is None:
+            colors = self._features_dealt  # [N, K, 3]
+            sh_degree = self.active_sh_degree
+        else:
+            colors = override_colors
+            sh_degree = None
+        
+        # Prepare batch viewmats and Ks
+        viewmats = torch.stack([cam.world_view_transform for cam in viewpoint_cameras])  # [C, 4, 4]
+        Ks = torch.stack([cam.K for cam in viewpoint_cameras])  # [C, 3, 3]
+        
+        # Prepare backgrounds
+        if bg_color.ndim == 1:
+            backgrounds = bg_color.unsqueeze(0).repeat(C, 1)  # [C, 3]
+        else:
+            backgrounds = bg_color  # [C, 3] or [1, 3] -> will broadcast
+        
+        # Batch rasterization
+        render_colors, render_alphas, info = rasterization(
+            means=means3D,  # [N, 3]
+            quats=rotations,  # [N, 4]
+            scales=scales,  # [N, 3]
+            opacities=opacity.squeeze(-1),  # [N,]
+            colors=colors,
+            viewmats=viewmats,  # [C, 4, 4]
+            Ks=Ks,  # [C, 3, 3]
+            backgrounds=backgrounds,
+            width=width,
+            height=height,
+            packed=False,
+            sh_degree=sh_degree,
+            render_mode="RGB+D" if pipe.use_depth_loss else "RGB",
+            rasterize_mode="antialiased" if pipe.antialiasing else "classic",
+        )
+        
+        # Convert [C, H, W, 3] -> [C, 3, H, W] and split into list
+        results = []
+        for i in range(C):
+            rendered_image = render_colors[i].permute(2, 0, 1)  # [3, H, W] or [4, H, W]
+            
+            # Handle radii indexing (gsplat returns [C, N] or [N])
+            if info["radii"].ndim == 2:
+                radii = info["radii"][i].max(dim=1).values
+            else:
+                radii = info["radii"].max(dim=1).values
+            
+            # Handle viewspace_points indexing
+            if info["means2d"].ndim == 3:
+                viewspace_points = info["means2d"][i]
+            else:
+                viewspace_points = info["means2d"]
+            
+            if viewspace_points.requires_grad:
+                viewspace_points.retain_grad()
+            
+            results.append({
+                "render": rendered_image[:3],
+                "viewspace_points": viewspace_points,
+                "visibility_filter": radii > 0,
+                "radii": radii,
+                "depth": rendered_image[3] if pipe.use_depth_loss else None
+            })
+        
+        return results
 
     def render(self, viewpoint_camera, pipe, bg_color: torch.Tensor, scaling_modifier=1.0, override_colors=None,
                other_viewpoint_camera=None, store_cache=False, use_cache=False, point_features=None,
