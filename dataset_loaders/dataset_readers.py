@@ -162,11 +162,24 @@ def readColmapSceneInfo(path, images, depths=None, masks=None, eval=True, use_de
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
-    image_dir = f"{path}/{images or 'images'}"
+    # Handle images path: if absolute, use as-is; if relative, join with source_path
+    if images and os.path.isabs(images):
+        image_dir = images
+    elif images:
+        image_dir = os.path.join(path, images)
+    else:
+        image_dir = os.path.join(path, 'images')
+    
     depth_dir = None
     depths_params = None
     if use_depth_loss:
-        depth_dir = f"{path}/{depths or 'depths'}"
+        # Handle depths path similarly
+        if depths and os.path.isabs(depths):
+            depth_dir = depths
+        elif depths:
+            depth_dir = os.path.join(path, depths)
+        else:
+            depth_dir = os.path.join(path, 'depths')
         if not os.path.exists(depth_dir):
             raise ValueError("Depth loss is enabled but no depth maps found in the dataset.")
         if depth_is_inverted:
@@ -181,7 +194,10 @@ def readColmapSceneInfo(path, images, depths=None, masks=None, eval=True, use_de
                 depths_params[key]["med_scale"] = med_scale
     mask_dir = None
     if use_masks:
-        mask_dir = f"{path}/{masks or 'masks'}"
+        if os.path.isabs(masks):
+            mask_dir = masks
+        else:
+            mask_dir = os.path.join(path, masks or 'masks')
         if not os.path.exists(mask_dir):
             raise ValueError("Masks are enabled but no mask images found in the dataset.")
 
