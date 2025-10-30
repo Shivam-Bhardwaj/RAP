@@ -8,10 +8,10 @@ from tqdm import tqdm
 
 # setup individual scene IDs and their download location
 scenes = [
-    "KingsCollege"
-    "OldHospital"
-    "ShopFacade"
-    "StMarysChurch"
+    "KingsCollege",
+    "OldHospital",
+    "ShopFacade",
+    "StMarysChurch",
     "GreatCourt"
 ]
 
@@ -40,7 +40,7 @@ for scene in scenes:
         valid_images.remove("seq2/frame00043.jpg")
     modes = ['train', 'test']
     img_output_folder = f'{datadir}/colmap/images'
-    pose_output_folder = f'{datadir}/colmap/sparse/model'
+    pose_output_folder = f'{datadir}/colmap/sparse/0'
     test_list_output_folder = f'{datadir}/colmap/undistorted'
     os.makedirs(img_output_folder, exist_ok=True)
     os.makedirs(pose_output_folder, exist_ok=True)
@@ -92,8 +92,91 @@ for scene in scenes:
                     img_h = target_height
                 image = cv.resize(image, (img_w, img_h))
                 cv.imwrite(f"{img_output_folder}/{image_name}", image, [cv.IMWRITE_JPEG_QUALITY, 100])
+    
+    # Get camera intrinsics from reconstruction.nvm file
+    # NVM format: <Camera> = <File name> <focal length> <quaternion WXYZ> <camera center> <radial distortion> 0
+    focal_length = None
+    with open(input_file) as f:
+        lines = f.readlines()
+        # Skip header lines
+        if len(lines) > 2:
+            # Look for camera parameters in the image list
+            for i in range(3, min(10, len(lines))):  # Check first few images
+                parts = lines[i].strip().split()
+                if len(parts) >= 5:
+                    try:
+                        focal_length = float(parts[1])
+                        break
+                    except (ValueError, IndexError):
+                        continue
+    
+    # If no focal length found in NVM, estimate from image dimensions
+    if focal_length is None:
+        # Try to read a sample image to get dimensions
+        sample_img_path = None
+        for pose in poses[:1]:
+            if pose:
+                sample_img_path = f"{img_output_folder}/{pose[0]}"
+                break
+        if sample_img_path and os.path.exists(sample_img_path):
+            sample_img = cv.imread(sample_img_path)
+            if sample_img is not None:
+                img_h, img_w = sample_img.shape[:2]
+                # Estimate focal length (typical for Cambridge: ~525 pixels for 640x480)
+                focal_length = img_w * 0.82  # Approximate scaling factor
+                cx, cy = img_w / 2, img_h / 2
+            else:
+                img_w, img_h = 640, 480
+                focal_length = 525.0
+                cx, cy = img_w / 2, img_h / 2
+        else:
+            # Fallback values
+            img_w, img_h = 640, 480
+            focal_length = 525.0
+            cx, cy = img_w / 2, img_h / 2
+    else:
+        # Use the focal length from NVM, but need to scale if images were resized
+        # Original Cambridge images are typically 640x480, we resize to target_height=480
+        # So we need to scale the focal length proportionally
+        sample_img_path = None
+        for pose in poses[:1]:
+            if pose:
+                sample_img_path = f"{img_output_folder}/{pose[0]}"
+                break
+        if sample_img_path and os.path.exists(sample_img_path):
+            sample_img = cv.imread(sample_img_path)
+            if sample_img is not None:
+                img_h, img_w = sample_img.shape[:2]
+                # Scale focal length from original to resized dimensions
+                # Original height was ~480, new height is img_h
+                focal_length = focal_length * (img_h / 480.0)
+                cx, cy = img_w / 2, img_h / 2
+            else:
+                img_w, img_h = 640, 480
+                focal_length = 525.0
+                cx, cy = img_w / 2, img_h / 2
+        else:
+            img_w, img_h = 640, 480
+            focal_length = 525.0
+            cx, cy = img_w / 2, img_h / 2
+    
+    # Write cameras.txt (PINHOLE format: CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[])
+    with open(f"{pose_output_folder}/cameras.txt", "w") as cam_output:
+        cam_output.write("# Camera list with one line of data per camera:\n")
+        cam_output.write("#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
+        cam_output.write(f"1 PINHOLE {img_w} {img_h} {focal_length} {focal_length} {cx} {cy}\n")
+    
+    # Write points3D.txt (empty or minimal - COLMAP format requires this file)
+    with open(f"{pose_output_folder}/points3D.txt", "w") as points_output:
+        points_output.write("# 3D point list with one line of data per point:\n")
+        points_output.write("#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n")
+        # Empty point cloud - will be generated during 3DGS training
+    
     poses.sort(key=lambda x: x[0])
     with open(f"{pose_output_folder}/images.txt", "w") as pose_output:
+        pose_output.write("# Image list with two lines of data per image:\n")
+        pose_output.write("#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
+        pose_output.write("#   POINTS2D[] as (X, Y, POINT3D_ID)\n")
         for i, pose in enumerate(poses):
             image_name, qw, qx, qy, qz, tx, ty, tz = pose
             pose_output.write(f"{i + 1} {qw} {qx} {qy} {qz} {tx} {ty} {tz} 1 {image_name}\n\n")

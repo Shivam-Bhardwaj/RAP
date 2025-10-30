@@ -27,15 +27,33 @@ def aleatoric_uncertainty_regression(log_variance):
 
 class UncertaintyVisualizer:
     """
-    A class to help visualize uncertainty maps.
+    Utility class for visualizing uncertainty maps.
+    
+    Provides methods to visualize epistemic and aleatoric uncertainty
+    across training sets and synthetic samples.
     """
+    
     def __init__(self):
+        """Initialize the uncertainty visualizer."""
         pass
 
-    def plot_uncertainty_map(self, image, uncertainty, save_path):
+    def plot_uncertainty_map(self, image: torch.Tensor, uncertainty: torch.Tensor, save_path: str) -> None:
         """
-        Plots the uncertainty map over an image.
+        Plot uncertainty map overlaid on an image.
+        
+        Args:
+            image: Input image tensor of shape (C, H, W) or (H, W, C)
+            uncertainty: Uncertainty tensor of shape (H, W) or matching image dimensions
+            save_path: Path to save the visualization
+            
+        Note:
+            This is a stub implementation. Full implementation should:
+            1. Normalize uncertainty values
+            2. Create colormap overlay
+            3. Blend with input image
+            4. Save visualization to disk
         """
-        # Placeholder for visualization logic
-        print(f"Visualizing uncertainty map and saving to {save_path}")
-        pass
+        raise NotImplementedError(
+            "UncertaintyVisualizer.plot_uncertainty_map() requires implementation. "
+            "This should create a heatmap visualization of uncertainty overlaid on the image."
+        )

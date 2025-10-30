@@ -7,10 +7,10 @@ import torch
 from torch.cuda.amp import autocast
 
 from rap import RVSWithDiscriminatorTrainer
-from RAP.semantic.semantic_rap_net import SemanticRAPNet
-from RAP.semantic.semantic_synthesizer import SemanticSynthesizer
-from RAP.semantic.hard_negative_miner import HardNegativeMiner
-from RAP.semantic.curriculum import Curriculum
+from semantic.semantic_rap_net import SemanticRAPNet
+from semantic.semantic_synthesizer import SemanticSynthesizer
+from semantic.hard_negative_miner import HardNegativeMiner
+from semantic.curriculum import Curriculum
 
 class SemanticTrainer(RVSWithDiscriminatorTrainer):
     def __init__(self, args):

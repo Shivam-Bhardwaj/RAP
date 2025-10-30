@@ -1,16 +1,78 @@
-__pycache__
-.idea
-.vscode
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 .DS_Store
-data
-ckpts
-logs*
-out*
-wandb
-build
-*.EGG-INFO
-vis
+
+# Data and checkpoints
+data/
+ckpts/
 *.pt*
+*.pth*
+*.ckpt*
 *.np*
-*.jpg
+*.npy
+
+# Logs and temporary files
+*.log
+logs*/
+*.tmp
+*.temp
+
+# Output directories
+output/
+out*/
+vis/
+wandb/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Package files
+*.EGG-INFO
 dfnet
+
+# Images (except assets)
+*.jpg
+*.jpeg
+*.png
+!assets/**/*.jpg
+!assets/**/*.jpeg
+!assets/**/*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.so
+*.o
+*.a
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation builds
+docs/_build/

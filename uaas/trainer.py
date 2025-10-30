@@ -7,10 +7,10 @@ import torch
 from torch.cuda.amp import autocast
 
 from rap import RVSWithDiscriminatorTrainer
-from RAP.uaas.uaas_rap_net import UAASRAPNet
-from RAP.uaas.sampler import UncertaintySampler
-from RAP.uaas.loss import UncertaintyWeightedAdversarialLoss
-from RAP.common.uncertainty import epistemic_uncertainty, aleatoric_uncertainty_regression
+from uaas.uaas_rap_net import UAASRAPNet
+from uaas.sampler import UncertaintySampler
+from uaas.loss import UncertaintyWeightedAdversarialLoss
+from common.uncertainty import epistemic_uncertainty, aleatoric_uncertainty_regression
 
 class UAASTrainer(RVSWithDiscriminatorTrainer):
     def __init__(self, args):

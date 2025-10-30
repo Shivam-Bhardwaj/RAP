@@ -256,11 +256,12 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
 @torch.no_grad()
 def render_sets(args):
+    device = torch.device(args.render_device)
     gaussians = GaussianModel(args)
     scene = Scene(args, gaussians, load_iteration=args.iteration, shuffle=False)
 
     bg_color = [1, 1, 1] if args.white_background else [0, 0, 0]
-    background = torch.tensor(bg_color, dtype=torch.float, device=args.device)
+    background = torch.tensor(bg_color, dtype=torch.float, device=device)
     gaussians.set_eval(True)
 
     if args.scene_name == "lego":

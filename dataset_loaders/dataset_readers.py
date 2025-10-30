@@ -231,13 +231,59 @@ def readColmapSceneInfo(path, images, depths=None, masks=None, eval=True, use_de
     ply_path = os.path.join(path, "sparse/0/points3D.ply")
     bin_path = os.path.join(path, "sparse/0/points3D.bin")
     txt_path = os.path.join(path, "sparse/0/points3D.txt")
-    if not os.path.exists(ply_path):
+    
+    # Check if PLY file exists and is not empty
+    ply_exists_and_valid = False
+    if os.path.exists(ply_path):
+        try:
+            plydata = PlyData.read(ply_path)
+            if len(plydata['vertex']) > 0:
+                ply_exists_and_valid = True
+        except:
+            pass
+    
+    if not ply_exists_and_valid:
         print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
             xyz, rgb, _ = read_points3D_binary(bin_path)
+            storePly(ply_path, xyz, rgb)
         except:
-            xyz, rgb, _ = read_points3D_text(txt_path)
-        storePly(ply_path, xyz, rgb)
+            try:
+                xyz, rgb, _ = read_points3D_text(txt_path)
+                if len(xyz) > 0:
+                    storePly(ply_path, xyz, rgb)
+                else:
+                    raise ValueError("Empty point cloud")
+            except:
+                # No point cloud file exists, generate random points from camera positions
+                print("No point cloud found. Generating random points from camera positions...")
+                num_pts = 100_000
+                cam_centers = []
+                for cam in train_cam_infos:
+                    W2C = getWorld2View2(cam.R, cam.T)
+                    C2W = np.linalg.inv(W2C)
+                    cam_centers.append(C2W[:3, 3])
+                
+                cam_centers = np.array(cam_centers)
+                center = np.mean(cam_centers, axis=0)
+                radius = np.max(np.linalg.norm(cam_centers - center, axis=1)) * 1.5
+                
+                # Generate random points in a sphere around the camera centers
+                phi = np.random.uniform(0, 2 * np.pi, num_pts)
+                costheta = np.random.uniform(-1, 1, num_pts)
+                u = np.random.uniform(0, 1, num_pts)
+                theta = np.arccos(costheta)
+                r = radius * np.cbrt(u)
+                
+                xyz = np.zeros((num_pts, 3))
+                xyz[:, 0] = r * np.sin(theta) * np.cos(phi) + center[0]
+                xyz[:, 1] = r * np.sin(theta) * np.sin(phi) + center[1]
+                xyz[:, 2] = r * np.cos(theta) + center[2]
+                
+                # Random colors
+                rgb = np.random.randint(0, 255, (num_pts, 3))
+                storePly(ply_path, xyz, rgb)
+    
     try:
         pcd = fetchPly(ply_path)
     except:

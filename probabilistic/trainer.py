@@ -7,9 +7,9 @@ import torch
 from torch.cuda.amp import autocast
 
 from rap import BaseTrainer
-from RAP.probabilistic.probabilistic_rap_net import ProbabilisticRAPNet
-from RAP.probabilistic.hypothesis_validator import HypothesisValidator
-from RAP.probabilistic.loss import MixtureNLLLoss
+from probabilistic.probabilistic_rap_net import ProbabilisticRAPNet
+from probabilistic.hypothesis_validator import HypothesisValidator
+from probabilistic.loss import MixtureNLLLoss
 
 class ProbabilisticTrainer(BaseTrainer):
     def __init__(self, args):
