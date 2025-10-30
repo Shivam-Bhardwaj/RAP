@@ -162,13 +162,26 @@ def readColmapSceneInfo(path, images, depths=None, masks=None, eval=True, use_de
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
-    # Handle images path: if absolute, use as-is; if relative, join with source_path
-    if images and os.path.isabs(images):
-        image_dir = images
-    elif images:
-        image_dir = os.path.join(path, images)
+    # Handle images path: if absolute, use as-is; if relative, check if it's already a full path or relative to source_path
+    if images:
+        if os.path.isabs(images):
+            image_dir = images
+        else:
+            # Check if images path already contains source_path (i.e., it's already a full path from project root)
+            if os.path.exists(images):
+                # Path exists as-is, use it
+                image_dir = images
+            elif images.startswith(path):
+                # Already contains source_path, use as-is
+                image_dir = images
+            else:
+                # Relative to source_path
+                image_dir = os.path.join(path, images)
     else:
         image_dir = os.path.join(path, 'images')
+    
+    # Normalize the path to handle any redundant separators
+    image_dir = os.path.normpath(image_dir)
     
     depth_dir = None
     depths_params = None

@@ -16,6 +16,7 @@ safetensors
 kapture
 kapture_localization
 roma
+tensorboard
 submodules/fused-ssim
 submodules/gsplat
 gsplat
