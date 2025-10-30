@@ -1,0 +1,10 @@
+RAP Performance Comparison Report
+======================================================================
+
+Baseline: /home/ubuntu/RAP_original/baseline_output/benchmark_results.json
+Optimized: /home/ubuntu/RAP/output/Cambridge/KingsCollege/benchmark_results.json
+
+Speedup Summary:
+  Test Set: 1.05x (+5.1%)
+  Train Set: 1.04x (+3.8%)
+  Standard Test: 1.03x (+2.7%)
