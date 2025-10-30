@@ -30,15 +30,19 @@ def synthetic_dataset_fixture(tmp_path_factory):
     """
     # First check if we already have a synthetic dataset
     existing_synthetic = os.path.join(os.path.dirname(__file__), "..", "synthetic_test_dataset")
+    existing_synthetic = os.path.abspath(existing_synthetic)
     if os.path.exists(existing_synthetic):
         images_dir = os.path.join(existing_synthetic, "images")
         if os.path.exists(images_dir):
-            images_count = len([f for f in os.listdir(images_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
-            if images_count > 10:  # Use existing if it has enough images
-                model_path = os.path.join(existing_synthetic, "model")
-                if os.path.exists(model_path):
-                    print(f"Using existing synthetic dataset: {existing_synthetic} ({images_count} images)")
-                    return existing_synthetic, model_path
+            try:
+                images_count = len([f for f in os.listdir(images_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
+                if images_count > 10:  # Use existing if it has enough images
+                    model_path = os.path.join(existing_synthetic, "model")
+                    if os.path.exists(model_path):
+                        print(f"Using existing synthetic dataset: {existing_synthetic} ({images_count} images)")
+                        return existing_synthetic, model_path
+            except Exception:
+                pass
     
     # Try to find an existing dataset (check common locations)
     source_dataset_paths = [
