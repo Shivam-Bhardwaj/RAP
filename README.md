@@ -33,6 +33,16 @@
     <em>TLDR: We make camera localization more generalizable by addressing the data gap via 3DGS and learning gap via a two-branch joint learning with adversarial loss, achieving localization accuracy surpassing 1cm/0.3° in indoor scenarios, 20cm/0.5° in outdoor scenarios, and 10cm/0.2° in driving scenarios.</em>
 </p>
 
+## ✨ New Features
+
+This update introduces several major extensions to the RAP system, enhancing its capabilities in uncertainty estimation, handling pose ambiguity, and robustness to semantic scene changes.
+
+- **Uncertainty-Aware Adversarial Synthesis (UAAS):** The model can now predict pose uncertainty, which is used to guide the synthesis of new training data in high-uncertainty areas.
+- **Multi-Hypothesis Probabilistic APR:** Instead of a single pose, the model can now output multiple pose hypotheses, allowing for better handling of ambiguous scenes.
+- **Semantic-Adversarial Scene Synthesis:** The training pipeline now incorporates semantic information, enabling the generation of adversarially challenging scenes with targeted semantic modifications.
+
+A new unified training script `RAP/train.py` and an extended benchmarking script `RAP/benchmark_speed.py` are included to support these new features.
+
 ## 🔊 News
 
 - 2025/6/25: Our paper is accepted to ICCV 2025! 🎉 Code is released! Data and checkpoints will be released as soon as we have access to the server that has been undergoing maintenance. The latest results in the paper will also be updated soon.
@@ -152,3 +162,65 @@ If you find our work helpful, please consider citing our paper!
  booktitle={International Conference on Computer Vision (ICCV)}
 }
 ```
+
+### New Modules
+
+- **Uncertainty-Aware Adversarial Synthesis (UAAS)**: Located in `RAP/uaas/`.
+  - `uaas_rap_net.py`: `UAASRAPNet` model with uncertainty prediction head.
+  - `loss.py`: `UncertaintyWeightedAdversarialLoss`.
+  - `sampler.py`: `UncertaintySampler` for targeted data generation.
+  - `trainer.py`: `UAASTrainer` to orchestrate the training.
+
+- **Multi-Hypothesis Probabilistic APR**: Located in `RAP/probabilistic/`.
+  - `probabilistic_rap_net.py`: `ProbabilisticRAPNet` with MDN head.
+  - `loss.py`: `MixtureNLLLoss` for training the MDN.
+  - `hypothesis_validator.py`: `HypothesisValidator` for ranking poses.
+  - `selection.py`: `HypothesisSelector` for choosing the best pose.
+  - `trainer.py`: `ProbabilisticTrainer`.
+
+- **Semantic-Adversarial Scene Synthesis**: Located in `RAP/semantic/`.
+  - `semantic_rap_net.py`: `SemanticRAPNet`.
+  - `semantic_synthesizer.py`: `SemanticSynthesizer` for scene manipulation.
+  - `hard_negative_miner.py`: `HardNegativeMiner`.
+  - `curriculum.py`: `Curriculum` learning scheduler.
+  - `trainer.py`: `SemanticTrainer`.
+
+- **Common Utilities**: Located in `RAP/common/`.
+  - `uncertainty.py`: Shared functions for uncertainty calculation and visualization.
+
+## Training
+
+To train one of the new models, use the `RAP/train.py` script. You must specify the `trainer_type` to select the desired model and training loop.
+
+**Example:**
+
+```bash
+python RAP/train.py --config configs/7scenes.txt --trainer_type uaas --run_name 7scenes_uaas_experiment
+```
+
+- `--trainer_type`: Choose from `uaas`, `probabilistic`, or `semantic`.
+- `--config`: Path to the dataset and model configuration file.
+- `--run_name`: A name for the training run, used for logging.
+
+## Benchmarking
+
+The `RAP/benchmark_speed.py` script has been extended to evaluate the new models on both rendering speed and pose accuracy.
+
+**Example:**
+
+```bash
+python RAP/benchmark_speed.py --model_path /path/to/your/trained/model --benchmark_pose --model_type uaas
+```
+
+- `--model_path`: Path to the directory containing the trained model checkpoint.
+- `--benchmark_pose`: A flag to enable pose accuracy evaluation.
+- `--model_type`: The type of model to benchmark (`uaas`, `probabilistic`, `semantic`, or `baseline`).
+
+## Evaluation Results
+
+*This section should be filled in with tables and figures summarizing the experimental results after running the training and benchmarking scripts.*
+
+- **Generalization:** Compare pose accuracy on held-out test sets and novel datasets.
+- **Calibrated Uncertainty:** For the UAAS model, visualize uncertainty maps and analyze the correlation between predicted uncertainty and prediction error.
+- **Ambiguity Handling:** For the probabilistic model, show examples of multi-modal pose predictions in ambiguous scenes.
+- **Error Reduction:** Demonstrate the reduction in pose error compared to the baseline RAP model across different benchmarks.

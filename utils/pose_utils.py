@@ -25,11 +25,12 @@ class CameraPoseLoss(nn.Module):
             self.s_x = config.s_x
             self.s_q = config.s_q
 
-    def forward(self, est_pose, gt_pose):
+    def forward(self, est_pose, gt_pose, log_var=None):
         """
         Forward pass.
         :param est_pose: (torch.Tensor) batch of estimated poses, a Nx12 tensor.
         :param gt_pose: (torch.Tensor) batch of ground-truth poses, a Nx12 tensor.
+        :param log_var: (torch.Tensor) batch of log variances for uncertainty, a Nx6 tensor.
         :return: Camera pose loss.
         """
         bs = est_pose.shape[0]
@@ -41,9 +42,21 @@ class CameraPoseLoss(nn.Module):
         position_gt = gt_pose[:, :, 3]
         rotation_gt = gt_pose[:, :, :3].reshape(bs, 9)
 
-        # Position loss
+        if log_var is not None:
+            log_var_x = log_var[:, :3]
+            log_var_q = log_var[:, 3:]
+
+            l_x_sq = torch.linalg.vector_norm(position_gt - position_est, ord=self.norm, dim=1)**2
+            l_q_sq = torch.linalg.vector_norm(rotation_gt - rotation_est, ord=self.norm, dim=1)**2
+
+            loss_x = 0.5 * torch.exp(-log_var_x).sum(dim=1) * l_x_sq + 0.5 * log_var_x.sum(dim=1)
+            loss_q = 0.5 * torch.exp(-log_var_q).sum(dim=1) * l_q_sq + 0.5 * log_var_q.sum(dim=1)
+
+            return loss_x.mean() + loss_q.mean()
+
+        # Original position loss
         l_x = torch.linalg.vector_norm(position_gt - position_est, ord=self.norm, dim=1).mean()
-        # Orientation loss
+        # Original orientation loss
         l_q = torch.linalg.vector_norm(rotation_gt - rotation_est, ord=self.norm, dim=1).mean()
 
         if self.learnable:

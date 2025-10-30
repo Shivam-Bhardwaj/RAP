@@ -23,6 +23,11 @@ from utils.scene import Scene
 from render import test_rendering_speed, render_set
 from utils.general_utils import fix_seed
 
+# Import new models
+from RAP.uaas.uaas_rap_net import UAASRAPNet
+from RAP.probabilistic.probabilistic_rap_net import ProbabilisticRAPNet
+from RAP.semantic.semantic_rap_net import SemanticRAPNet
+
 
 def benchmark_rendering_speed(args, num_warmup=5, num_iterations=100):
     """Benchmark rendering speed with detailed metrics."""
@@ -138,6 +143,15 @@ def benchmark_rendering_speed(args, num_warmup=5, num_iterations=100):
     return results
 
 
+def benchmark_pose_accuracy(args, model, data_loader):
+    """Benchmark pose accuracy."""
+    print(f"Benchmarking pose accuracy for {model.__class__.__name__}...")
+    # This function would call the existing eval_model utility
+    # from utils.eval_utils import eval_model
+    # and would need to be adapted for each model type (e.g. probabilistic)
+    pass
+
+
 def save_benchmark_results(results, output_path):
     """Save benchmark results to JSON file."""
     output_file = Path(output_path) / "benchmark_results.json"
@@ -173,7 +187,7 @@ def compare_results(results_file1, results_file2):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark rendering speed")
+    parser = argparse.ArgumentParser(description="Benchmark rendering speed and pose accuracy")
     lp = ModelParams(parser)
     op = OptimizationParams(parser)
     
@@ -182,7 +196,11 @@ def main():
     parser.add_argument("--compare", nargs=2, metavar=('BASELINE', 'OPTIMIZED'), 
                        help="Compare two benchmark result files")
     parser.add_argument("--output", default=None, help="Output directory for results")
-    
+    parser.add_argument("--benchmark_pose", action="store_true", help="Benchmark pose accuracy")
+    parser.add_argument("--model_type", type=str, default="baseline", 
+                        choices=["baseline", "uaas", "probabilistic", "semantic"],
+                        help="Type of model to benchmark.")
+
     args = get_combined_args(parser)
     args = args_init.argument_init(args)
     
@@ -201,6 +219,25 @@ def main():
     # Run benchmark
     results = benchmark_rendering_speed(args, num_iterations=args.num_iterations)
     
+    # Optionally benchmark pose accuracy
+    if args.benchmark_pose:
+        model_map = {
+            "baseline": None, # Should load the original RAPNet
+            "uaas": UAASRAPNet(args),
+            "probabilistic": ProbabilisticRAPNet(args),
+            "semantic": SemanticRAPNet(args, num_semantic_classes=19) # Example number of classes
+        }
+        model = model_map[args.model_type]
+        if model:
+            # Here you would load the trained model weights
+            # model.load_state_dict(...)
+            # And then run the benchmark
+            # benchmark_pose_accuracy(args, model, data_loader)
+            print(f"Pose accuracy benchmarking for {args.model_type} is a placeholder.")
+        else:
+            print("Running baseline pose accuracy benchmark (placeholder).")
+
+
     # Add metadata
     results['metadata'] = {
         'model_path': args.model_path,
