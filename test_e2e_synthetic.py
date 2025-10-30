@@ -38,6 +38,7 @@ def test_trainer_initialization():
         args = parser.parse_args(base_args)
         args.device = 'cpu'
         args.render_device = 'cpu'
+        args.resolution = 1.0  # Add resolution
         args.logbase = tempfile.mkdtemp()
         args.model_path = model_path
         args.dataset_type = 'Colmap'
@@ -65,6 +66,7 @@ def test_trainer_initialization():
         args = parser.parse_args(base_args)
         args.device = 'cpu'
         args.render_device = 'cpu'
+        args.resolution = 1.0  # Add resolution
         args.logbase = tempfile.mkdtemp()
         args.model_path = model_path
         args.dataset_type = 'Colmap'
@@ -91,6 +93,7 @@ def test_trainer_initialization():
         args = parser.parse_args(base_args)
         args.device = 'cpu'
         args.render_device = 'cpu'
+        args.resolution = 1.0  # Add resolution
         args.logbase = tempfile.mkdtemp()
         args.model_path = model_path
         args.dataset_type = 'Colmap'

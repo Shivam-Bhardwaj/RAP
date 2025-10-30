@@ -13,11 +13,28 @@ class ProbabilisticRAPNet(RAPNet):
         # Get feature_dim from decoder_dim (transformer output dimension)
         decoder_dim = self.transformer_t.d_model
         feature_dim = getattr(self, 'feature_dim', decoder_dim)
-        self.feature_dim = feature_dim
+        self.feature_dim = feature_dim * 2  # *2 for concatenated translation and rotation features
         self.mdn_head = nn.Linear(self.feature_dim, num_gaussians * (1 + 6 + 6)) # pi, mu, sigma for 6-DoF pose
 
     def forward(self, x, return_feature=False):
-        features, _ = super().forward(x, return_feature=True)
+        # Call parent forward to get pose prediction
+        pose_output = super().forward(x, return_feature=return_feature)
+        
+        # Extract features from parent - need to call with return_feature=True
+        B, C, H, W = x.shape
+        feature_maps, (pos_t, pos_rot) = self.backbone(x)
+        features_t, features_rot = feature_maps
+        
+        # Get global descriptors from transformers
+        pose_token_embed_rot = self.pose_token_embed_rot.unsqueeze(1).expand(-1, B, -1)
+        pose_token_embed_t = self.pose_token_embed_t.unsqueeze(1).expand(-1, B, -1)
+        local_descs_t = self.transformer_t(self.input_proj_t(features_t), pos_t, pose_token_embed_t)
+        local_descs_rot = self.transformer_rot(self.input_proj_rot(features_rot), pos_rot, pose_token_embed_rot)
+        global_desc_t = local_descs_t[:, 0, :]  # [B, decoder_dim]
+        global_desc_rot = local_descs_rot[:, 0, :]  # [B, decoder_dim]
+        
+        # Concatenate for MDN input
+        features = torch.cat([global_desc_t, global_desc_rot], dim=1)  # [B, decoder_dim*2]
         
         mdn_params = self.mdn_head(features)
         
