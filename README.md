@@ -91,6 +91,49 @@ RAP-ID/
 └── train.py                 # Unified training script
 ```
 
+## Benchmarking
+
+RAP-ID includes comprehensive benchmarking tools to compare all extensions against the baseline and original RAP implementation.
+
+### Quick Benchmarking
+
+Run parallel benchmarks for all models:
+
+```bash
+python benchmark_comparison.py \
+    --config configs/7scenes.txt \
+    --datadir /path/to/data \
+    --model_path /path/to/3dgs \
+    --models baseline uaas probabilistic semantic \
+    --parallel \
+    --benchmark_epochs 1 \
+    --output ./benchmark_results
+```
+
+This generates:
+- Training performance metrics (batch time, throughput, memory)
+- Evaluation accuracy (translation/rotation errors, success rates)
+- Inference speed (FPS, latency)
+- Comparison reports showing improvements over baseline
+
+### Comparing Against Original RAP
+
+Compare RAP-ID against the original [ai4ce/RAP](https://github.com/ai4ce/RAP) implementation:
+
+```bash
+# Setup original repo (optional)
+python benchmark_vs_original.py --clone_original
+
+# Run comparison
+python benchmark_vs_original.py \
+    --compare \
+    --rap_id_results ./benchmark_results/benchmark_summary.json \
+    --original_results /path/to/original/results.json \
+    --output ./comparison
+```
+
+For detailed benchmarking instructions, see [BENCHMARKING_GUIDE.md](BENCHMARKING_GUIDE.md).
+
 ## Quick Start
 
 ### Installation

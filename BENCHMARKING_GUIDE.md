@@ -1,6 +1,6 @@
 # Benchmarking Guide for RAP-ID
 
-This guide explains how to benchmark the different RAP-ID models for both inference and training.
+This guide explains how to benchmark the different RAP-ID models for both inference and training, including parallel benchmarking and comparison with the original RAP implementation.
 
 ## Overview
 
@@ -10,6 +10,8 @@ RAP-ID provides several benchmarking scripts:
 2. **benchmark_comprehensive.py** - Comprehensive pose accuracy and inference speed evaluation
 3. **benchmark_training.py** - Measures 3DGS training speed
 4. **benchmark_training_rap.py** - Measures RAP model training performance
+5. **benchmark_comparison.py** - Parallel benchmarking suite comparing all RAP-ID models
+6. **benchmark_vs_original.py** - Compare RAP-ID against original RAP implementation
 
 ## Benchmarking 3DGS Rendering Speed
 
