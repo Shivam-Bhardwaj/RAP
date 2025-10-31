@@ -120,20 +120,28 @@ def render_multiview_video(args, name, train_views, gaussians, background):
                                    f"{name}_{appear_idx}_{view_appear.colmap_id}")
         makedirs(render_path, exist_ok=True)
 
-        # Fix: Use imageio v2 API with explicit format='FFMPEG' to avoid TiffWriter issue
+        # Fix: Use imageio v2 API - skip video if FFMPEG not available, save frames instead
         video_path = f'{render_path}/000_mv_{name}_{appear_idx}_{view_appear.colmap_id}.mp4'
         render_video_out = None
+        
+        # Try to create video writer - skip if it fails (non-critical)
         try:
-            # Try FFMPEG format explicitly to ensure video writer, not TiffWriter
-            render_video_out = imageio.get_writer(video_path, format='FFMPEG', fps=60, codec='libx264', quality=10.0)
-        except (TypeError, ValueError) as e:
-            # Fallback: try without quality parameter or different format
+            # Check if FFMPEG plugin is available
             try:
-                render_video_out = imageio.get_writer(video_path, format='FFMPEG', fps=60)
-            except Exception as e2:
-                # Last resort: skip video, just save frames
-                print(f"⚠️  Warning: Could not create video writer ({e2}). Saving frames instead.")
-                render_video_out = None
+                import imageio.plugins.ffmpeg
+                # FFMPEG available - try to use it
+                render_video_out = imageio.get_writer(video_path, format='FFMPEG', fps=60, codec='libx264', quality=10.0)
+            except (ImportError, AttributeError):
+                # FFMPEG not available - try default format (may fail, that's OK)
+                try:
+                    render_video_out = imageio.get_writer(video_path, fps=60, codec='libx264')
+                except Exception:
+                    # Will fall through to None, save frames instead
+                    pass
+        except Exception as e:
+            # Video creation failed - will save frames instead (non-critical)
+            print(f"⚠️  Note: Video writer unavailable ({type(e).__name__}), saving frames instead.")
+            render_video_out = None
         
         _ = gaussians.render(view_appear, args, background, store_cache=True)["render"]
         for idx, view in enumerate(tqdm(generated_views, desc=f"{vid}")):

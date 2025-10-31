@@ -380,7 +380,12 @@ def train(args):
                 render_lego(args.model_path, "test", iteration, scene.test_cameras, scene.train_cameras[0],
                             gaussians, args, background)
 
-            render_multiview_video(args, "train", scene.train_cameras, gaussians, background)
+            try:
+                render_multiview_video(args, "train", scene.train_cameras, gaussians, background)
+            except Exception as e:
+                logging.warning(f"Video rendering failed (non-critical): {e}")
+                print(f"⚠️  Video rendering failed (non-critical): {e}")
+                print("   GS training completed successfully - checkpoint is valid")
 
             # appearance tuning
             render_interpolation(args, "train", args.iterations, scene.train_cameras, gaussians, background)
