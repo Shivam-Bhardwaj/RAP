@@ -120,18 +120,43 @@ def render_multiview_video(args, name, train_views, gaussians, background):
                                    f"{name}_{appear_idx}_{view_appear.colmap_id}")
         makedirs(render_path, exist_ok=True)
 
-        render_video_out = imageio.get_writer(f'{render_path}/000_mv_{name}_{appear_idx}_{view_appear.colmap_id}.mp4',
-                                              mode='I', fps=60, codec='libx264', quality=10.0)
+        # Fix: Use imageio v2 API with explicit format='FFMPEG' to avoid TiffWriter issue
+        video_path = f'{render_path}/000_mv_{name}_{appear_idx}_{view_appear.colmap_id}.mp4'
+        render_video_out = None
+        try:
+            # Try FFMPEG format explicitly to ensure video writer, not TiffWriter
+            render_video_out = imageio.get_writer(video_path, format='FFMPEG', fps=60, codec='libx264', quality=10.0)
+        except (TypeError, ValueError) as e:
+            # Fallback: try without quality parameter or different format
+            try:
+                render_video_out = imageio.get_writer(video_path, format='FFMPEG', fps=60)
+            except Exception as e2:
+                # Last resort: skip video, just save frames
+                print(f"⚠️  Warning: Could not create video writer ({e2}). Saving frames instead.")
+                render_video_out = None
+        
         _ = gaussians.render(view_appear, args, background, store_cache=True)["render"]
         for idx, view in enumerate(tqdm(generated_views, desc=f"{vid}")):
             view.camera_center = view_appear.camera_center
             rendering = gaussians.render(view, args, background, use_cache=True)["render"]
             rendering = rendering.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
-            render_video_out.append_data(rendering)
-            # cv.imwrite(os.path.join(render_path, f"{name}_{appear_idx}_{idx:05d}.jpg"),
-            #            cv.cvtColor(rendering, cv.COLOR_RGB2BGR), [int(cv.IMWRITE_JPEG_QUALITY), 100])
+            
+            if render_video_out is not None:
+                try:
+                    render_video_out.append_data(rendering)
+                except Exception as ve:
+                    # Handle any video writing errors gracefully
+                    print(f"⚠️  Video writing failed ({ve}), saving as frames instead.")
+                    render_video_out.close()
+                    render_video_out = None
+            
+            if render_video_out is None:
+                # Save as individual frames if video writer failed or unavailable
+                cv.imwrite(os.path.join(render_path, f"{name}_{appear_idx}_{idx:05d}.jpg"),
+                           cv.cvtColor(rendering, cv.COLOR_RGB2BGR), [int(cv.IMWRITE_JPEG_QUALITY), 100])
 
-        render_video_out.close()
+        if render_video_out is not None:
+            render_video_out.close()
 
 
 def render_lego(model_path, name, iteration, views, view0, gaussians, pipeline, background):
