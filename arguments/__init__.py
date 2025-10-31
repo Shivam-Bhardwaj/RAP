@@ -62,7 +62,7 @@ class ModelParams(ParamGroup):
         self._resolution = 1
         self._white_background = False  # True
         self.debug = False
-        self.compile = True
+        self.compile = False  # Disabled by default due to CUDA kernel compatibility issues with torch.compile
         self._antialiasing = True  # False
         self.sh_degree = 3
         self.convert_SHs_python = False
