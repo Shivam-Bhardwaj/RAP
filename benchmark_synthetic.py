@@ -212,7 +212,8 @@ def benchmark_synthetic(dataset_path: str = 'synthetic_test_dataset',
                        model_path: Optional[str] = None,
                        checkpoint_dir: Optional[str] = None,
                        device: str = 'cpu',
-                       batch_size: int = 1):
+                       batch_size: int = 1,
+                       max_samples: Optional[int] = None):
     """
     Run comprehensive benchmark on synthetic dataset.
     
@@ -289,8 +290,16 @@ def benchmark_synthetic(dataset_path: str = 'synthetic_test_dataset',
             train_skip=args.train_skip,
             test_skip=args.test_skip
         )
+        # Limit samples if specified
+        if max_samples and max_samples < len(dataset):
+            # Create a subset dataset
+            indices = list(range(min(max_samples, len(dataset))))
+            from torch.utils.data import Subset
+            dataset = Subset(dataset, indices)
+            print(f"✓ Loaded {len(dataset)} test samples (limited from {len(dataset) if hasattr(dataset, '__len__') else 'unknown'})")
+        else:
+            print(f"✓ Loaded {len(dataset)} test samples")
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-        print(f"✓ Loaded {len(dataset)} test samples")
     except Exception as e:
         print(f"✗ Error loading dataset: {e}")
         import traceback
@@ -373,10 +382,13 @@ def main():
                        help='Path to Gaussian Splatting model')
     parser.add_argument('--checkpoint_dir', type=str, default=None,
                        help='Directory containing model checkpoints')
-    parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
-                       help='Device to run on')
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', 
+                       choices=['cpu', 'cuda'],
+                       help='Device to run on (default: cuda if available, else cpu)')
     parser.add_argument('--batch_size', type=int, default=1,
                        help='Batch size for evaluation')
+    parser.add_argument('--max_samples', type=int, default=None,
+                       help='Maximum number of samples to evaluate (for faster testing)')
     
     args = parser.parse_args()
     
@@ -385,7 +397,8 @@ def main():
         model_path=args.model_path,
         checkpoint_dir=args.checkpoint_dir,
         device=args.device,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        max_samples=args.max_samples
     )
     
     return 0 if results else 1
