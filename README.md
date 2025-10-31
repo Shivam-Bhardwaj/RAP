@@ -217,6 +217,14 @@ The UAAS model achieves the highest inference speed (60.50 FPS), representing a 
 
 All enhanced models show improved translation accuracy. UAAS achieves the most significant reduction in error (36.4% improvement), followed by Semantic (7.5%) and Probabilistic (5.4%).
 
+#### Rotation Error Comparison
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_rotation_error.png" alt="Rotation Error Comparison" width="800"/>
+</p>
+
+Rotation error comparison across models. Note that the baseline shows minimal rotation error variation, while enhanced models may exhibit different rotation accuracy characteristics.
+
 #### Speedup Multiplier
 
 <p align="center">
