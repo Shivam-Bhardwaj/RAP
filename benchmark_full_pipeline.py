@@ -539,7 +539,10 @@ def run_full_pipeline_benchmark(dataset_path: str,
         accuracy_results = benchmark_accuracy(model, test_loader, args, model_type)
         results['accuracy'] = accuracy_results
         print(f"    ✓ Translation error: {accuracy_results['translation_errors']['median']:.4f} m (median)")
+        print(f"    ✓ Translation error (mean): {accuracy_results['translation_errors']['mean']:.4f} m")
         print(f"    ✓ Rotation error: {accuracy_results['rotation_errors']['median']:.4f} deg (median)")
+        print(f"    ✓ Rotation error (mean): {accuracy_results['rotation_errors']['mean']:.4f} deg")
+        print(f"    ✓ Rotation error (range): {accuracy_results['rotation_errors']['min']:.4f}° to {accuracy_results['rotation_errors']['max']:.4f}°")
         
         # Stage 4: Training Speed (skip if GS checkpoints missing to save time)
         try:
@@ -621,8 +624,29 @@ def run_full_pipeline_benchmark(dataset_path: str,
             print(f"  Inference Speed: {imp['speedup']:.2f}x ({imp['improvement_pct']:+.1f}%)")
         if 'accuracy' in improvement:
             acc = improvement['accuracy']
-            print(f"  Translation Error: {acc['translation']['improvement_pct']:+.1f}%")
-            print(f"  Rotation Error: {acc['rotation']['improvement_pct']:+.1f}%")
+            baseline_trans = acc['translation']['baseline']
+            model_trans = acc['translation']['model']
+            baseline_rot = acc['rotation']['baseline']
+            model_rot = acc['rotation']['model']
+            
+            print(f"  Translation Error: {baseline_trans:.4f}m → {model_trans:.4f}m ({acc['translation']['improvement_pct']:+.1f}% improvement)")
+            
+            # Enhanced rotation error display
+            if baseline_rot == 0.0 and model_rot == 0.0:
+                print(f"  Rotation Error: {baseline_rot:.4f}° → {model_rot:.4f}° (same)")
+            elif baseline_rot == 0.0:
+                print(f"  Rotation Error: {baseline_rot:.4f}° → {model_rot:.4f}° (worse by {model_rot:.2f}°)")
+            elif model_rot == 0.0:
+                print(f"  Rotation Error: {baseline_rot:.4f}° → {model_rot:.4f}° (improved by {baseline_rot:.2f}°)")
+            else:
+                improvement_pct = acc['rotation']['improvement_pct']
+                print(f"  Rotation Error: {baseline_rot:.4f}° → {model_rot:.4f}° ({improvement_pct:+.1f}% improvement)")
+            
+            # Show mean rotation errors for additional context
+            baseline_mean_rot = baseline_results['accuracy']['rotation_errors']['mean']
+            model_mean_rot = model_results['accuracy']['rotation_errors']['mean']
+            print(f"  Rotation Error (mean): {baseline_mean_rot:.4f}° → {model_mean_rot:.4f}°")
+            
         if 'model_size' in improvement:
             size = improvement['model_size']
             print(f"  Model Size: {size['size_change_pct']:+.1f}%")
