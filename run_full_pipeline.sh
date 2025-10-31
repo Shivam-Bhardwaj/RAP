@@ -6,7 +6,7 @@ set -e  # Exit on error
 # Configuration
 DATASET="${1:-data/Cambridge/KingsCollege/colmap}"
 MODEL_PATH="${2:-output/Cambridge/KingsCollege}"
-CONFIG="${3:-configs/7scenes.txt}"
+CONFIG="${3:-configs/kingscollege.txt}"
 EPOCHS="${4:-100}"
 BATCH_SIZE="${5:-4}"
 DEVICE="${6:-cuda}"

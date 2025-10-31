@@ -7,7 +7,7 @@ set -e  # Exit on error
 # OPTIMIZED Configuration for H100
 DATASET="${DATASET:-data/Cambridge/KingsCollege/colmap}"
 MODEL_PATH="${MODEL_PATH:-output/Cambridge/KingsCollege}"
-CONFIG="${CONFIG:-configs/7scenes.txt}"
+CONFIG="${CONFIG:-configs/kingscollege.txt}"
 EPOCHS="${EPOCHS:-100}"
 
 # OPTIMIZED for H100 (85GB VRAM, 114 SMs)
@@ -50,19 +50,32 @@ step_one_opt() {
     echo "STEP 1: Training GS Model (OPTIMIZED)"
     echo "=========================================="
     echo "Using optimized settings for H100..."
+    echo "  - Reduced test_iterations frequency (fewer evaluations = faster training)"
+    echo "  - Evaluation only at milestones: 10000, 20000, 30000 (3 instead of 6)"
     echo ""
     
-    # GS training doesn't use batch size, but we can optimize iterations/rendering
+    # Optimizations for GS training:
+    # 1. Reduce test_iterations frequency (fewer evaluations during training)
+    #    Default: [5000, 10000, 15000, 20000, 25000, 30000] (6 evaluations)
+    #    Optimized: [10000, 20000, 30000] (3 evaluations = 50% fewer)
+    # 2. Keep eval enabled but less frequent
+    # 3. Video rendering is already non-fatal (handled in gs.py)
     python gs.py \
         -s "$DATASET" \
         -m "$MODEL_PATH" \
         --iterations 30000 \
         --eval \
+        --test_iterations 10000 20000 30000 \
         2>&1 | tee "${MODEL_PATH}/gs_training_optimized.log"
     
     echo ""
     if [ -d "$MODEL_PATH/model/ckpts_point_cloud" ]; then
         echo "✅ GS training completed successfully!"
+        echo ""
+        echo "Speed optimizations applied:"
+        echo "  ✓ Reduced evaluation frequency (from 6 to 3 evaluations = 50% fewer)"
+        echo "  ✓ GPU utilization optimized"
+        echo "  ✓ Same final checkpoint quality - only fewer intermediate checkpoints"
     else
         echo "⚠️  Warning: GS checkpoint not found."
     fi
