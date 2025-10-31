@@ -10,6 +10,7 @@ CONFIG="${3:-configs/7scenes.txt}"
 EPOCHS="${4:-100}"
 BATCH_SIZE="${5:-4}"
 DEVICE="${6:-cuda}"
+SKIP_GS="${7:-false}"  # Set to 'true' to skip GS training
 
 echo "=========================================="
 echo "COMPLETE PIPELINE EXECUTION"
@@ -20,34 +21,64 @@ echo "Config: $CONFIG"
 echo "Epochs: $EPOCHS"
 echo "Batch Size: $BATCH_SIZE"
 echo "Device: $DEVICE"
+echo "Skip GS Training: $SKIP_GS"
 echo "=========================================="
 echo ""
 
-# Step 1: Train GS Model
+# Step 1: Train GS Model (or skip if checkpoint exists or SKIP_GS=true)
 echo "=========================================="
-echo "STEP 1: Training Gaussian Splatting Model"
+echo "STEP 1: Gaussian Splatting Model"
 echo "=========================================="
-echo "This will take 30min - 2 hours..."
-echo ""
 
-python gs.py \
-    -s "$DATASET" \
-    -m "$MODEL_PATH" \
-    --iterations 30000 \
-    --eval
-
-# Verify GS checkpoint
-if [ ! -d "$MODEL_PATH/model/ckpts_point_cloud" ]; then
-    echo "⚠️  Warning: GS checkpoint not found. Training may have failed."
-    read -p "Continue anyway? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+GS_CHECKPOINT="$MODEL_PATH/model/ckpts_point_cloud"
+if [ "$SKIP_GS" = "true" ] || [ -d "$GS_CHECKPOINT" ]; then
+    if [ -d "$GS_CHECKPOINT" ]; then
+        echo "✓ GS checkpoint found at $GS_CHECKPOINT"
+        echo "  Skipping GS training (using existing checkpoint)"
+    else
+        echo "⚠️  Skipping GS training (SKIP_GS=true)"
+        echo "  Warning: No GS checkpoint found - RAP model training will fail!"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+else
+    echo "Training GS model (this will take 30min - 2 hours)..."
+    echo ""
+    
+    # Try with CUDA_LAUNCH_BLOCKING=1 for better error messages
+    CUDA_LAUNCH_BLOCKING=1 python gs.py \
+        -s "$DATASET" \
+        -m "$MODEL_PATH" \
+        --iterations 30000 \
+        --eval || {
+        echo ""
+        echo "⚠️  GS training failed!"
+        echo "   This may be due to:"
+        echo "   - Dataset format issues"
+        echo "   - GPU memory issues"
+        echo "   - CUDA compatibility"
+        echo ""
+        echo "   Options:"
+        echo "   1. Fix the GS training issue and re-run"
+        echo "   2. Use existing GS checkpoint (if available)"
+        echo "   3. Skip GS step: ./run_full_pipeline.sh ... ... ... false true"
+        echo ""
+        exit 1
+    }
+    
+    # Verify GS checkpoint was created
+    if [ ! -d "$GS_CHECKPOINT" ]; then
+        echo "⚠️  Warning: GS checkpoint not found after training."
         exit 1
     fi
+    
+    echo ""
+    echo "✓ GS model trained successfully"
 fi
 
-echo ""
-echo "✓ GS model trained"
 echo ""
 
 # Step 2: Train All Models
