@@ -188,9 +188,13 @@ def benchmark_accuracy(model, data_loader, args, model_type: str) -> Dict:
                 pi_probs = torch.softmax(mixture_dist.mixture_distribution.logits, dim=-1)
                 component_means = mixture_dist.component_distribution.base_dist.loc
                 mean_pose_6d = (pi_probs.unsqueeze(-1) * component_means).sum(dim=1)
-                # Convert to 3x4 format (simplified - using identity rotation)
+                # Convert 6D pose [translation_3d, rotation_3d_axis_angle] to 3x4 format
                 trans = mean_pose_6d[:, :3].unsqueeze(-1)
-                rot_mat = torch.eye(3, device=mean_pose_6d.device).unsqueeze(0).repeat(mean_pose_6d.shape[0], 1, 1)
+                # Convert axis-angle rotation (3D) to rotation matrix
+                from utils.pose_utils import Lie
+                lie = Lie()
+                rot_axis_angle = mean_pose_6d[:, 3:6]  # Extract rotation part (axis-angle)
+                rot_mat = lie.so3_to_SO3(rot_axis_angle)  # Convert to rotation matrix [B, 3, 3]
                 poses_pred = torch.cat([rot_mat.reshape(-1, 9), trans.squeeze(-1)], dim=1)
             elif model_type == 'uaas':
                 poses_pred_12d, _ = model(imgs)
@@ -257,7 +261,16 @@ def benchmark_accuracy(model, data_loader, args, model_type: str) -> Dict:
             # Reshape to 3x4 format
             rot_mat_pred = poses_pred[:, :9].reshape(-1, 3, 3)
             trans_pred = poses_pred[:, 9:].unsqueeze(-1)
-            poses_pred_3x4 = torch.cat([rot_mat_pred, trans_pred], dim=2)
+            
+            # Orthonormalize rotation matrices for all models (using SVD)
+            # This ensures valid rotation matrices
+            u, s, v = torch.linalg.svd(rot_mat_pred)
+            rot_mat_pred_ortho = u @ v.transpose(-2, -1)
+            # Ensure proper rotation (det = 1)
+            det = torch.det(rot_mat_pred_ortho)
+            rot_mat_pred_ortho = rot_mat_pred_ortho * det.sign().unsqueeze(-1).unsqueeze(-1)
+            
+            poses_pred_3x4 = torch.cat([rot_mat_pred_ortho, trans_pred], dim=2)
             
             # Reshape ground truth
             if poses_gt.dim() == 2 and poses_gt.shape[1] == 12:
