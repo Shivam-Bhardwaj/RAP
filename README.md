@@ -134,6 +134,143 @@ python benchmark_vs_original.py \
 
 For detailed benchmarking instructions, see [BENCHMARKING_GUIDE.md](BENCHMARKING_GUIDE.md).
 
+## Experimental Results: Case Study on Cambridge KingsCollege Dataset
+
+We conducted comprehensive benchmarking experiments on the Cambridge KingsCollege dataset to evaluate the performance improvements of our enhanced models compared to the baseline RAP implementation. This case study demonstrates the practical benefits of each extension across multiple performance dimensions.
+
+### Experimental Setup
+
+**Dataset:** Cambridge KingsCollege (outdoor scene with varying lighting conditions)  
+**Hardware:** NVIDIA H100 PCIe GPU  
+**Evaluation:** 50 test samples  
+**Metrics:** Inference speed (FPS), pose accuracy (translation/rotation errors), model size
+
+### Baseline Performance
+
+The baseline RAPNet achieves the following performance:
+
+| Metric | Value |
+|--------|-------|
+| Inference Speed | 56.44 FPS |
+| Translation Error (median) | 2.29 m |
+| Rotation Error (median) | 0.00° |
+| Model Size | 42.63 MB |
+| Parameters | 11,132,909 |
+
+### Comparative Results
+
+The following table summarizes the performance improvements across all models:
+
+| Model | FPS | Translation Error | Accuracy Improvement | Speed Improvement | Model Size |
+|-------|-----|------------------|---------------------|------------------|------------|
+| **Baseline** | 56.44 | 2.29 m | -- | -- | 42.63 MB |
+| **UAAS** | 60.50 | **1.45 m** | **+36.4%** | +7.2% | 42.88 MB |
+| **Probabilistic** | 35.16 | 2.16 m | +5.4% | -37.7% | 42.76 MB |
+| **Semantic** | 56.01 | **2.12 m** | **+7.5%** | -0.7% | 42.63 MB |
+
+*Note: Lower translation error is better. Improvement % indicates reduction in error.*
+
+### Key Findings
+
+#### 🏆 UAAS Model: Best Overall Performance
+
+- **Translation Accuracy**: 36.4% improvement (1.45 m vs 2.29 m error)
+- **Inference Speed**: 7.2% faster (60.50 FPS vs 56.44 FPS)
+- **Model Size**: Minimal increase (+0.6%, 42.88 MB vs 42.63 MB)
+- **Key Advantage**: Best accuracy improvement while maintaining superior speed
+
+The UAAS model demonstrates the most significant improvements, achieving the best balance between accuracy and speed. This makes it ideal for applications requiring high pose accuracy with real-time performance constraints (e.g., AR/VR systems, autonomous navigation).
+
+#### 🎯 Semantic Model: Best Efficiency-Accuracy Trade-off
+
+- **Translation Accuracy**: 7.5% improvement (2.12 m vs 2.29 m error)
+- **Inference Speed**: Nearly identical to baseline (-0.7%, 56.01 FPS vs 56.44 FPS)
+- **Model Size**: No increase (42.63 MB, identical to baseline)
+- **Key Advantage**: Best accuracy improvement with zero overhead
+
+Semantic RAPNet provides the best efficiency-accuracy trade-off, ideal for resource-constrained environments where memory and computational efficiency are critical.
+
+#### 📊 Probabilistic Model: Uncertainty Quantification
+
+- **Translation Accuracy**: 5.4% improvement (2.16 m vs 2.29 m error)
+- **Inference Speed**: 37.7% slower (35.16 FPS vs 56.44 FPS)
+- **Model Size**: Minimal increase (+0.3%, 42.76 MB vs 42.63 MB)
+- **Key Advantage**: Provides uncertainty quantification for pose estimates
+
+While slower due to distribution computation, the probabilistic model enables uncertainty-aware applications critical for safety-critical systems where pose confidence is essential for decision-making.
+
+### Performance Visualizations
+
+#### Inference Speed Comparison
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_inference_speed.png" alt="Inference Speed Comparison" width="800"/>
+</p>
+
+The UAAS model achieves the highest inference speed (60.50 FPS), representing a 7.2% improvement over the baseline.
+
+#### Translation Error Comparison
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_translation_error.png" alt="Translation Error Comparison" width="800"/>
+</p>
+
+All enhanced models show improved translation accuracy. UAAS achieves the most significant reduction in error (36.4% improvement), followed by Semantic (7.5%) and Probabilistic (5.4%).
+
+#### Speedup Multiplier
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_speedup.png" alt="Speedup Comparison" width="800"/>
+</p>
+
+The speedup chart shows relative performance improvements. UAAS demonstrates a 1.07x speedup, while Semantic maintains near-baseline speed.
+
+#### Comprehensive Performance Radar
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_radar.png" alt="Performance Radar Chart" width="800"/>
+</p>
+
+The radar chart provides a normalized comparison across multiple dimensions, clearly showing UAAS's superior performance in translation accuracy while maintaining competitive speed.
+
+#### Improvement Summary
+
+<p align="center">
+  <img src="benchmark_full_pipeline_results_charts_improvements.png" alt="Improvement Summary" width="800"/>
+</p>
+
+This chart summarizes percentage improvements across all metrics, highlighting the strengths of each model variant.
+
+### Discussion
+
+**Accuracy Improvements:** All three enhanced models demonstrate measurable improvements in translation accuracy compared to the baseline. The UAAS model's 36.4% improvement is particularly noteworthy, suggesting that uncertainty-aware training and adversarial synthesis effectively improve pose estimation robustness.
+
+**Speed Considerations:** While UAAS achieves both accuracy and speed improvements, the Probabilistic model sacrifices speed for uncertainty quantification capabilities. This trade-off is acceptable for applications requiring uncertainty estimates.
+
+**Practical Implications:**
+
+- **UAAS**: Recommended for applications requiring high accuracy with real-time performance (e.g., AR/VR systems, mobile robotics)
+- **Semantic**: Ideal for resource-constrained environments where memory and computational efficiency are critical
+- **Probabilistic**: Suitable for safety-critical applications requiring uncertainty quantification (e.g., autonomous vehicles)
+
+### Reproducibility
+
+To reproduce these results:
+
+```bash
+python benchmark_full_pipeline.py \
+    --dataset data/Cambridge/KingsCollege/colmap \
+    --model_path output/Cambridge/KingsCollege \
+    --device cuda \
+    --batch_size 8 \
+    --max_samples 50
+```
+
+Complete results and detailed analysis are available in:
+- `benchmark_full_pipeline_results.json` - Complete metrics data
+- `BENCHMARK_PAPER.md` - Full research paper with detailed analysis
+- `BENCHMARK_REPORT.md` - Quick reference report
+
 ## Quick Start
 
 ### Installation
