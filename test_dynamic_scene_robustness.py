@@ -506,8 +506,11 @@ def main():
         from torch.utils.data import Subset
         test_dataset = Subset(test_dataset, list(range(args.max_samples)))
     
+    # Optimized data loading for H100
+    num_workers = min(16, os.cpu_count() or 8)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, 
-                                              shuffle=False, num_workers=0)
+                                              shuffle=False, num_workers=num_workers, 
+                                              pin_memory=True, persistent_workers=True if num_workers > 0 else False)
     
     print(f"✓ Test samples: {len(test_dataset)}")
     

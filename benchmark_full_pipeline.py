@@ -470,8 +470,12 @@ def run_full_pipeline_benchmark(dataset_path: str,
         from torch.utils.data import Subset
         test_dataset = Subset(test_dataset, list(range(max_samples)))
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    # Optimized data loading for H100: use multiple workers and pin_memory
+    num_workers = min(16, os.cpu_count() or 8)  # Use up to 16 workers
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, 
+                             num_workers=num_workers, pin_memory=True, persistent_workers=True if num_workers > 0 else False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, 
+                            num_workers=num_workers, pin_memory=True, persistent_workers=True if num_workers > 0 else False)
     
     print(f"✓ Train samples: {len(train_dataset)}")
     print(f"✓ Test samples: {len(test_dataset)}")
