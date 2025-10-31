@@ -1,0 +1,71 @@
+{
+  "uaas": {
+    "model_type": "uaas",
+    "num_samples": 100,
+    "translation_errors": {
+      "mean": 2.296299716359186,
+      "median": 2.33285206883608,
+      "std": 0.27207310515060634,
+      "min": 1.3942669408520532,
+      "max": 2.891498497723067
+    },
+    "rotation_errors": {
+      "mean": 24.91614505767822,
+      "median": 0.0,
+      "std": 52.81304495341149,
+      "min": 0.0,
+      "max": 178.31646728515625
+    },
+    "inference_speed": {
+      "mean_time_per_image": 0.10393107854402982,
+      "fps": 9.621761017098997,
+      "total_time": 1.3511040210723877
+    }
+  },
+  "probabilistic": {
+    "model_type": "probabilistic",
+    "num_samples": 100,
+    "translation_errors": {
+      "mean": 1.9911109437633163,
+      "median": 2.026294038942887,
+      "std": 0.21528744911608907,
+      "min": 1.5184472345019213,
+      "max": 2.504649369482024
+    },
+    "rotation_errors": {
+      "mean": 54.371498641967776,
+      "median": 78.43498992919922,
+      "std": 43.862766524271606,
+      "min": 0.0,
+      "max": 118.83744812011719
+    },
+    "inference_speed": {
+      "mean_time_per_image": 0.04243043752817007,
+      "fps": 23.56798699839209,
+      "total_time": 0.5515956878662109
+    }
+  },
+  "semantic": {
+    "model_type": "semantic",
+    "num_samples": 100,
+    "translation_errors": {
+      "mean": 2.0420799956670534,
+      "median": 2.0544941529814214,
+      "std": 0.151445649222699,
+      "min": 1.7070675205771049,
+      "max": 2.3435355927716532
+    },
+    "rotation_errors": {
+      "mean": 54.371498641967776,
+      "median": 78.43498992919922,
+      "std": 43.862766524271606,
+      "min": 0.0,
+      "max": 118.83744812011719
+    },
+    "inference_speed": {
+      "mean_time_per_image": 0.022080128009502705,
+      "fps": 45.289592504609864,
+      "total_time": 0.28704166412353516
+    }
+  }
+}

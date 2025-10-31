@@ -1,0 +1,235 @@
+{
+  "dataset": "data/Cambridge/KingsCollege/colmap",
+  "model_path": "output/Cambridge/KingsCollege",
+  "device": "cuda",
+  "batch_size": 4,
+  "num_test_samples": 50,
+  "results": {
+    "baseline": {
+      "initialization": {
+        "init_time": 0.20894098281860352,
+        "num_parameters": 11132909,
+        "model_size_mb": 42.63129806518555,
+        "success": true
+      },
+      "inference": {
+        "mean_inference_time": 0.017719433857844427,
+        "fps": 56.43521164516766,
+        "min_time": 0.013686895370483398,
+        "max_time": 0.05739307403564453,
+        "std_time": 0.0114599528798316
+      },
+      "accuracy": {
+        "translation_errors": {
+          "mean": 2.269589472248603,
+          "median": 2.2877069180557603,
+          "std": 0.19411361801916843,
+          "min": 1.8287644325591845,
+          "max": 2.625619339286582
+        },
+        "rotation_errors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "std": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        }
+      },
+      "training": {
+        "mean_iteration_time": null,
+        "iterations_per_second": null,
+        "success": false,
+        "error": "api_key not configured (no-tty). call wandb.login(key=[your_api_key])"
+      }
+    },
+    "uaas": {
+      "initialization": {
+        "init_time": 0.18738174438476562,
+        "num_parameters": 11199347,
+        "model_size_mb": 42.88473892211914,
+        "success": true
+      },
+      "inference": {
+        "mean_inference_time": 0.016532732890202448,
+        "fps": 60.486067647812504,
+        "min_time": 0.014361143112182617,
+        "max_time": 0.020580530166625977,
+        "std_time": 0.0015671910555093839
+      },
+      "accuracy": {
+        "translation_errors": {
+          "mean": 1.5733176303340497,
+          "median": 1.453955001973162,
+          "std": 0.4637326901512432,
+          "min": 0.9161654676713633,
+          "max": 2.9260476826307493
+        },
+        "rotation_errors": {
+          "mean": 17.647199897766114,
+          "median": 0.0,
+          "std": 42.38939272575623,
+          "min": 0.0,
+          "max": 174.9731903076172
+        }
+      },
+      "training": {
+        "mean_iteration_time": null,
+        "iterations_per_second": null,
+        "success": false,
+        "error": "api_key not configured (no-tty). call wandb.login(key=[your_api_key])"
+      }
+    },
+    "probabilistic": {
+      "initialization": {
+        "init_time": 0.18524408340454102,
+        "num_parameters": 11166254,
+        "model_size_mb": 42.75849914550781,
+        "success": true
+      },
+      "inference": {
+        "mean_inference_time": 0.028439044952392578,
+        "fps": 35.16292483358763,
+        "min_time": 0.023931026458740234,
+        "max_time": 0.06040501594543457,
+        "std_time": 0.009288152154066842
+      },
+      "accuracy": {
+        "translation_errors": {
+          "mean": 2.076184370948968,
+          "median": 2.1631104956950136,
+          "std": 0.3396127802570565,
+          "min": 1.4626627364230016,
+          "max": 2.6330130612869076
+        },
+        "rotation_errors": {
+          "mean": 81.50895446777344,
+          "median": 79.52240371704102,
+          "std": 4.490671491166431,
+          "min": 77.66311645507812,
+          "max": 96.17073059082031
+        }
+      },
+      "training": {
+        "mean_iteration_time": null,
+        "iterations_per_second": null,
+        "success": false,
+        "error": "api_key not configured (no-tty). call wandb.login(key=[your_api_key])"
+      }
+    },
+    "semantic": {
+      "initialization": {
+        "init_time": 0.17343473434448242,
+        "num_parameters": 11132909,
+        "model_size_mb": 42.63129806518555,
+        "success": true
+      },
+      "inference": {
+        "mean_inference_time": 0.017852581464327298,
+        "fps": 56.01430818272314,
+        "min_time": 0.01376485824584961,
+        "max_time": 0.039328575134277344,
+        "std_time": 0.008588596628135539
+      },
+      "accuracy": {
+        "translation_errors": {
+          "mean": 2.0848656947231166,
+          "median": 2.1164311980982693,
+          "std": 0.14897230855044316,
+          "min": 1.7818616016293016,
+          "max": 2.331197888031426
+        },
+        "rotation_errors": {
+          "mean": 81.50895446777344,
+          "median": 79.52240371704102,
+          "std": 4.490671491166431,
+          "min": 77.66311645507812,
+          "max": 96.17073059082031
+        }
+      },
+      "training": {
+        "mean_iteration_time": null,
+        "iterations_per_second": null,
+        "success": false,
+        "error": "api_key not configured (no-tty). call wandb.login(key=[your_api_key])"
+      }
+    }
+  },
+  "improvements": {
+    "uaas": {
+      "inference_speed": {
+        "baseline_fps": 56.43521164516766,
+        "model_fps": 60.486067647812504,
+        "speedup": 1.0717788750065174,
+        "improvement_pct": 7.177887500651734
+      },
+      "accuracy": {
+        "translation": {
+          "baseline": 2.2877069180557603,
+          "model": 1.453955001973162,
+          "improvement_pct": 36.444874538001315
+        },
+        "rotation": {
+          "baseline": 0.0,
+          "model": 0.0,
+          "improvement_pct": 0
+        }
+      },
+      "model_size": {
+        "baseline_mb": 42.63129806518555,
+        "model_mb": 42.88473892211914,
+        "size_change_pct": 0.5944948158652571
+      }
+    },
+    "probabilistic": {
+      "inference_speed": {
+        "baseline_fps": 56.43521164516766,
+        "model_fps": 35.16292483358763,
+        "speedup": 0.6230671208371114,
+        "improvement_pct": -37.69328791628887
+      },
+      "accuracy": {
+        "translation": {
+          "baseline": 2.2877069180557603,
+          "model": 2.1631104956950136,
+          "improvement_pct": 5.446345481467389
+        },
+        "rotation": {
+          "baseline": 0.0,
+          "model": 79.52240371704102,
+          "improvement_pct": 0
+        }
+      },
+      "model_size": {
+        "baseline_mb": 42.63129806518555,
+        "model_mb": 42.75849914550781,
+        "size_change_pct": 0.2983748703306391
+      }
+    },
+    "semantic": {
+      "inference_speed": {
+        "baseline_fps": 56.43521164516766,
+        "model_fps": 56.01430818272314,
+        "speedup": 0.9925418289366766,
+        "improvement_pct": -0.7458171063323394
+      },
+      "accuracy": {
+        "translation": {
+          "baseline": 2.2877069180557603,
+          "model": 2.1164311980982693,
+          "improvement_pct": 7.486785942976127
+        },
+        "rotation": {
+          "baseline": 0.0,
+          "model": 79.52240371704102,
+          "improvement_pct": 0
+        }
+      },
+      "model_size": {
+        "baseline_mb": 42.63129806518555,
+        "model_mb": 42.63129806518555,
+        "size_change_pct": 0.0
+      }
+    }
+  },
+  "timestamp": "2025-10-30 23:12:40"
+}

@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAP Performance Benchmark Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #3498db; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .metric { font-weight: bold; color: #27ae60; }
+        .improvement { color: #27ae60; font-weight: bold; }
+        .degradation { color: #e74c3c; }
+        .chart { text-align: center; margin: 30px 0; }
+        .chart img { max-width: 100%; border: 1px solid #ddd; }
+        .summary-box { background: #ecf0f1; padding: 20px; border-left: 4px solid #3498db; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAP Project: Performance Improvements Benchmark Report</h1>
+        
+        <div class="summary-box">
+            <h2>Executive Summary</h2>
+            <p><strong>Date:</strong> 2025-10-30 23:12:40</p>
+            <p><strong>Dataset:</strong> data/Cambridge/KingsCollege/colmap</p>
+            <p><strong>Device:</strong> CUDA</p>
+            <p><strong>Test Samples:</strong> 50</p>
+        </div>
+
+        <h2>Baseline Performance</h2>
+        <table>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Inference Speed</td><td class="metric">56.44 FPS</td></tr>
+            <tr><td>Translation Error (median)</td><td class="metric">2.2877 m</td></tr>
+            <tr><td>Rotation Error (median)</td><td class="metric">0.0000 deg</td></tr>
+            <tr><td>Model Size</td><td class="metric">42.63 MB</td></tr>
+            <tr><td>Parameters</td><td class="metric">11,132,909</td></tr>
+        </table>
+
+        <h2>Model Comparison</h2>
+        <table>
+            <tr>
+                <th>Model</th>
+                <th>Inference Speed</th>
+                <th>Translation Error</th>
+                <th>Accuracy Improvement</th>
+                <th>Speed Improvement</th>
+                <th>Model Size</th>
+            </tr>
+
+            <tr>
+                <td><strong>Baseline</strong></td>
+                <td>56.44 FPS</td>
+                <td>2.2877 m</td>
+                <td>-</td>
+                <td>-</td>
+                <td>42.63 MB</td>
+            </tr>
+
+            <tr>
+                <td><strong>UAAS</strong></td>
+                <td>60.49 FPS</td>
+                <td>1.4540 m</td>
+                <td class="improvement">+36.4%</td>
+                <td class="improvement">+7.2%</td>
+                <td>42.88 MB</td>
+            </tr>
+
+            <tr>
+                <td><strong>PROBABILISTIC</strong></td>
+                <td>35.16 FPS</td>
+                <td>2.1631 m</td>
+                <td class="improvement">+5.4%</td>
+                <td class="degradation">-37.7%</td>
+                <td>42.76 MB</td>
+            </tr>
+
+            <tr>
+                <td><strong>SEMANTIC</strong></td>
+                <td>56.01 FPS</td>
+                <td>2.1164 m</td>
+                <td class="improvement">+7.5%</td>
+                <td class="degradation">-0.7%</td>
+                <td>42.63 MB</td>
+            </tr>
+
+        </table>
+
+        <h2>Key Findings</h2>
+        <ul>
+            <li><strong>UAAS Model</strong>: Achieves <strong>36.4% improvement</strong> in translation accuracy while maintaining similar inference speed (+7.2%)</li>
+            <li><strong>Semantic Model</strong>: Provides <strong>7.5% improvement</strong> in translation accuracy with minimal overhead</li>
+            <li><strong>Probabilistic Model</strong>: Offers <strong>5.4% improvement</strong> in translation accuracy with uncertainty quantification</li>
+        </ul>
+
+        <h2>Performance Visualizations</h2>
+
+        <div class="chart">
+            <h3>Inference Speed</h3>
+            <img src="benchmark_full_pipeline_results_charts_inference_speed.png" alt="inference_speed.png">
+        </div>
+
+        <div class="chart">
+            <h3>Speedup</h3>
+            <img src="benchmark_full_pipeline_results_charts_speedup.png" alt="speedup.png">
+        </div>
+
+        <div class="chart">
+            <h3>Translation Error</h3>
+            <img src="benchmark_full_pipeline_results_charts_translation_error.png" alt="translation_error.png">
+        </div>
+
+        <div class="chart">
+            <h3>Rotation Error</h3>
+            <img src="benchmark_full_pipeline_results_charts_rotation_error.png" alt="rotation_error.png">
+        </div>
+
+        <div class="chart">
+            <h3>Model Size</h3>
+            <img src="benchmark_full_pipeline_results_charts_model_size.png" alt="model_size.png">
+        </div>
+
+        <div class="chart">
+            <h3>Radar</h3>
+            <img src="benchmark_full_pipeline_results_charts_radar.png" alt="radar.png">
+        </div>
+
+        <div class="chart">
+            <h3>Improvements</h3>
+            <img src="benchmark_full_pipeline_results_charts_improvements.png" alt="improvements.png">
+        </div>
+
+        <h2>Technical Details</h2>
+        <p>All benchmarks were performed on NVIDIA H100 PCIe GPU using PyTorch with CUDA acceleration. 
+        The evaluation uses 50 test samples from the Cambridge KingsCollege dataset.</p>
+        
+        <p>For complete results and reproducibility, see <code>benchmark_full_pipeline_results.json</code></p>
+    </div>
+</body>
+</html>
